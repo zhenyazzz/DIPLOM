@@ -1,0 +1,59 @@
+# --- OS / IDE ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+*.swo
+*.iml
+
+# --- Env / secrets ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# --- Logs / temp ---
+logs/
+*.log
+tmp/
+temp/
+*.tmp
+
+# --- Frontend (Vite / Node) ---
+node_modules/
+dist/
+dist-ssr/
+*.local
+frontend/node_modules/
+frontend/dist/
+
+# --- Java / Spring (когда появятся) ---
+**/target/
+**/.mvn/wrapper/maven-wrapper.jar
+*.class
+*.jar
+*.war
+*.ear
+hs_err_pid*
+replay_pid*
+
+# --- Docker / local data ---
+infra/data/
+*.sql.gz
+
+# --- Spec Kit ---
+# Локальный стейт уже игнорируется в services/*/.specify/.gitignore
+# (feature.json, extensions/*/local-config.yml).
+# Сами .specify/, specs/, constitution — коммитить нужно.
+.specify/extensions/.cache/
+.specify/extensions/.backup/
+
+# --- Coverage / test output ---
+coverage/
+.nyc_output/
+**/jacoco/
+**/test-results/
+**/surefire-reports/
