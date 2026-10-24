@@ -1,0 +1,21 @@
+# Copy to application-local.yml (do not commit real secrets) and run with:
+#   SPRING_PROFILES_ACTIVE=local
+#
+# Dummy values for local demos only.
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/portfolio_core
+    username: portfolio
+    password: portfolio
+
+app:
+  jwt:
+    secret: local-dev-jwt-secret-min-32-bytes-long!!
+  cookie:
+    secure: false
+
+portfolio:
+  security:
+    jwt:
+      secret: ${app.jwt.secret}

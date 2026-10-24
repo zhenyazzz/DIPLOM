@@ -1,0 +1,9 @@
+portfolio:
+  security:
+    jwt:
+      secret: "test-secret-that-is-long-enough-32b!"
+      role-claim: role
+    permit-all:
+      - GET:/api/public/**
+    filter-chain:
+      enabled: true
