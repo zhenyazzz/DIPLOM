@@ -15,7 +15,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UuidGenerator;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "refresh_sessions")
@@ -33,6 +35,8 @@ public class RefreshSessionEntity {
     @JoinColumn(name = "user_id", nullable = false)
     private UserEntity user;
 
+    // String maps to VARCHAR. PostgreSQL CHAR is bpchar, so schema validation fails without an explicit JDBC type.
+    @JdbcTypeCode(SqlTypes.CHAR)
     @Column(name = "token_hash", nullable = false, unique = true, length = 64, columnDefinition = "CHAR(64)")
     private String tokenHash;
 
