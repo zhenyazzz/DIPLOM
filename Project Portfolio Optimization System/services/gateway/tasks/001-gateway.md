@@ -2,8 +2,8 @@
 
 ## Цель
 
-Единая точка входа за nginx: маршрутизация `/api/**` → core, ранняя проверка JWT, CORS, rate-limit на login,
-`X-Request-Id`. Бизнес-логики и выдачи токенов нет.
+Единая точка входа за nginx: маршрутизация `/api/**` → core, ранняя проверка JWT, CORS, rate-limit на login.
+Бизнес-логики и выдачи токенов нет.
 
 ## Не входит
 
@@ -17,7 +17,8 @@
 - Java 25, Spring Boot 4.1.1, Spring Cloud 2025.1.x (≥ 2025.1.2 — первая с поддержкой Boot 4.1). Один модуль, порт 8090.
 - Пути проксируются **без переписывания** (нет StripPrefix): refresh-cookie core имеет `Path=/api/v1/auth`.
 - permit-all — те же 4 auth-эндпоинта, что в core, плюс `GET /actuator/health`.
-- Servlet-фильтры раньше Spring Security (-100): `RequestIdFilter` → `InternalPathsFilter` → `LoginRateLimitFilter`.
+- Servlet-фильтры раньше Spring Security (-100): `InternalPathsFilter` → `LoginRateLimitFilter`.
+- `X-Request-Id` не делаем (решение 2026-11-14).
 - Rate-limit — своя fixed-window реализация в памяти по IP (без Bucket4j); IP — `getRemoteAddr()` при
   `server.forward-headers-strategy: framework`.
 - CORS — бин `corsConfigurationSource`, Spring Security применяет его в цепочке common-security.
@@ -50,7 +51,7 @@
 
 ### Фаза 1 — реализация (параллельно)
 
-- [ ] T010 [P] `RequestIdFilter`, `UpstreamErrorResolver` + unit-тесты
+- [ ] T010 [P] `UpstreamErrorResolver` + unit-тесты
 - [ ] T011 [P] `InternalPathsFilter`, `LoginRateLimitFilter` + unit-тесты
 - [ ] T012 [P] `Dockerfile`, `AGENTS.md`, `ARCHITECTURE.md`, `infra/docker-compose.yml`
 

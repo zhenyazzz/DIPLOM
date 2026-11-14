@@ -128,28 +128,6 @@ class GatewayIntegrationTest {
     }
 
     @Test
-    @Order(5)
-    void requestIdIsGeneratedWhenMissingAndReusedWhenProvided() throws Exception {
-        String authorization = "Bearer " + TestJwt.userToken(UUID.randomUUID());
-
-        HttpResponse<String> generated = get("/api/v1/projects", Map.of("Authorization", authorization));
-
-        String generatedId = generated.headers().firstValue("X-Request-Id").orElse("");
-        assertThat(generatedId).isNotBlank();
-        assertThat(LAST.get()).isNotNull();
-        assertThat(LAST.get().header("X-Request-Id")).isEqualTo(generatedId);
-
-        LAST.set(null);
-
-        HttpResponse<String> provided = get(
-                "/api/v1/projects", Map.of("Authorization", authorization, "X-Request-Id", "abc-123"));
-
-        assertThat(provided.headers().firstValue("X-Request-Id")).hasValue("abc-123");
-        assertThat(LAST.get()).isNotNull();
-        assertThat(LAST.get().header("X-Request-Id")).isEqualTo("abc-123");
-    }
-
-    @Test
     @Order(6)
     void loginRateLimitReturns429WithRetryAfterPerClientIp() throws Exception {
         String limitedIp = "10.0.0.60";

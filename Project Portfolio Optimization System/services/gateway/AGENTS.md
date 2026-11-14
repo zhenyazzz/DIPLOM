@@ -9,7 +9,7 @@ Single entry point behind nginx for `/api/**`:
 
 - Routes `/api/v1/auth/**` and `/api/**` → core (`CORE_URL`). Paths are forwarded **without rewriting** (no StripPrefix): core's refresh cookie is `Path=/api/v1/auth`, so the prefix must reach core unchanged
 - Early JWT check via `common-security`; every other `/api/**` path needs a valid JWT
-- CORS (`corsConfigurationSource`, applied by the Spring Security chain), `X-Request-Id`, in-memory login rate-limit per client IP
+- CORS (`corsConfigurationSource`, applied by the Spring Security chain), in-memory login rate-limit per client IP
 - `/api/v1/files/**` is blocked with 404: FTS is internal and reachable only from core and finance
 - No business logic, no token issuance, no database
 
@@ -20,7 +20,7 @@ Out of scope: service discovery, distributed rate-limit (Redis), circuit breaker
 | Package | Contents |
 |---------|----------|
 | `config` | `GatewayProperties`, `WebConfig` (Clock, CORS) |
-| `filter` | `RequestIdFilter`, `InternalPathsFilter`, `LoginRateLimitFilter` — servlet filters ordered `HIGHEST_PRECEDENCE`, `+10`, `+20` — all before Spring Security (`-100`), in this order |
+| `filter` | `InternalPathsFilter`, `LoginRateLimitFilter` — servlet filters ordered `HIGHEST_PRECEDENCE + 10`, `+20` — both before Spring Security (`-100`), in this order |
 | `web` | `ProblemResponses`, `UpstreamErrorResolver` |
 
 Config: `src/main/resources/application.yml`. Test context: `src/test/resources/application-test.yml`.

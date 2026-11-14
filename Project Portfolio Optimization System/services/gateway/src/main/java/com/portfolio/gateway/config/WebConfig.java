@@ -26,8 +26,8 @@ public class WebConfig {
         CorsConfiguration cors = new CorsConfiguration();
         cors.setAllowedOrigins(properties.cors().allowedOrigins());
         cors.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        cors.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Request-Id"));
-        cors.setExposedHeaders(List.of("X-Request-Id", "Retry-After", "Location"));
+        cors.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        cors.setExposedHeaders(List.of("Retry-After", "Location"));
         cors.setAllowCredentials(true);
         cors.setMaxAge(Duration.ofHours(1));
 

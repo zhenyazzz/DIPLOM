@@ -16,7 +16,7 @@
     <version>0.1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
     <name>portfolio-gateway</name>
-    <description>Edge gateway: routing to core, early JWT check, CORS, login rate-limit, X-Request-Id</description>
+    <description>Edge gateway: routing to core, early JWT check, CORS, login rate-limit</description>
 
     <properties>
         <java.version>25</java.version>
