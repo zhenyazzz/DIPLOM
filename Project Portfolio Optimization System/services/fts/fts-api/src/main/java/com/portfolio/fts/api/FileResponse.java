@@ -10,6 +10,6 @@ public record FileResponse(
         String contentType,
         long size,
         String sha256,
-        String createdBy,
+        UUID ownerId,
         Instant createdAt) {
 }

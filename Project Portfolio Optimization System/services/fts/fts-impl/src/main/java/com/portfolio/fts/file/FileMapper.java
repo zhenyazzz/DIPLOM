@@ -8,5 +8,6 @@ import org.mapstruct.Mapping;
 public interface FileMapper {
 
     @Mapping(source = "sizeBytes", target = "size")
+    @Mapping(source = "ownerId", target = "ownerId")
     FileResponse toResponse(FileEntity entity);
 }

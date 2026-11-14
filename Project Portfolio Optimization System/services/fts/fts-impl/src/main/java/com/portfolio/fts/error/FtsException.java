@@ -33,6 +33,17 @@ public class FtsException extends RuntimeException {
                 "Content type '%s' is not allowed in bucket %s".formatted(contentType, bucket));
     }
 
+    public static FtsException contentMismatch(String contentType) {
+        return new FtsException(
+                HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+                "CONTENT_MISMATCH",
+                "Content does not match declared type '%s'".formatted(contentType));
+    }
+
+    public static FtsException uploadReadFailed() {
+        return new FtsException(HttpStatus.BAD_REQUEST, "UPLOAD_READ_FAILED", "Failed to read uploaded content");
+    }
+
     public static FtsException fileTooLarge(DataSize maxSize) {
         return new FtsException(
                 HttpStatus.CONTENT_TOO_LARGE,

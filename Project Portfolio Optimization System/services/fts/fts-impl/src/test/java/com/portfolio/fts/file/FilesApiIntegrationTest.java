@@ -29,7 +29,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockMultipartFile;
-import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
 import tools.jackson.databind.JsonNode;
@@ -38,11 +37,11 @@ import tools.jackson.databind.json.JsonMapper;
 class FilesApiIntegrationTest extends IntegrationTest {
 
     private static final byte[] CSV_BYTES = "id,name\n1,alpha\n".getBytes(StandardCharsets.UTF_8);
+    private static final byte[] PNG_BYTES = {
+        (byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D
+    };
     private static final String CSV_NAME = "data.csv";
     private static final String CSV_TYPE = "text/csv";
-
-    @Autowired
-    MockMvc mockMvc;
 
     @Autowired
     JsonMapper jsonMapper;
@@ -63,7 +62,7 @@ class FilesApiIntegrationTest extends IntegrationTest {
                 .andExpect(jsonPath("$.contentType").value(CSV_TYPE))
                 .andExpect(jsonPath("$.size").value(CSV_BYTES.length))
                 .andExpect(jsonPath("$.sha256").value(sha256Hex(CSV_BYTES)))
-                .andExpect(jsonPath("$.createdBy").value(userId.toString()))
+                .andExpect(jsonPath("$.ownerId").value(userId.toString()))
                 .andReturn();
 
         JsonNode body = readBody(result);
@@ -76,7 +75,7 @@ class FilesApiIntegrationTest extends IntegrationTest {
         UUID userId = UUID.randomUUID();
         JsonNode uploaded = uploadCsv(userId);
 
-        mockMvc.perform(get("/api/v1/files/{id}", uploaded.get("id").asString())
+        perform(get("/api/v1/files/{id}", uploaded.get("id").asString())
                         .header(HttpHeaders.AUTHORIZATION, bearer(TestJwt.userToken(userId))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(uploaded.get("id").asString()))
@@ -85,7 +84,7 @@ class FilesApiIntegrationTest extends IntegrationTest {
                 .andExpect(jsonPath("$.contentType").value(CSV_TYPE))
                 .andExpect(jsonPath("$.size").value(CSV_BYTES.length))
                 .andExpect(jsonPath("$.sha256").value(sha256Hex(CSV_BYTES)))
-                .andExpect(jsonPath("$.createdBy").value(userId.toString()));
+                .andExpect(jsonPath("$.ownerId").value(userId.toString()));
     }
 
     @Test
@@ -93,7 +92,7 @@ class FilesApiIntegrationTest extends IntegrationTest {
         UUID userId = UUID.randomUUID();
         JsonNode uploaded = uploadCsv(userId);
 
-        byte[] body = mockMvc.perform(get("/api/v1/files/{id}/content", uploaded.get("id").asString())
+        byte[] body = perform(get("/api/v1/files/{id}/content", uploaded.get("id").asString())
                         .header(HttpHeaders.AUTHORIZATION, bearer(TestJwt.userToken(userId))))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.parseMediaType(CSV_TYPE)))
@@ -111,7 +110,7 @@ class FilesApiIntegrationTest extends IntegrationTest {
         UUID userId = UUID.randomUUID();
         JsonNode uploaded = uploadCsv(userId);
 
-        MvcResult result = mockMvc.perform(post("/api/v1/files/{id}/download-url", uploaded.get("id").asString())
+        MvcResult result = perform(post("/api/v1/files/{id}/download-url", uploaded.get("id").asString())
                         .header(HttpHeaders.AUTHORIZATION, bearer(TestJwt.userToken(userId))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.url").isNotEmpty())
@@ -137,11 +136,11 @@ class FilesApiIntegrationTest extends IntegrationTest {
         JsonNode uploaded = uploadCsv(ownerId);
         String fileId = uploaded.get("id").asString();
 
-        mockMvc.perform(delete("/api/v1/files/{id}", fileId)
+        perform(delete("/api/v1/files/{id}", fileId)
                         .header(HttpHeaders.AUTHORIZATION, bearer(ownerToken)))
                 .andExpect(status().isNoContent());
 
-        mockMvc.perform(get("/api/v1/files/{id}", fileId)
+        perform(get("/api/v1/files/{id}", fileId)
                         .header(HttpHeaders.AUTHORIZATION, bearer(ownerToken)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("FILE_NOT_FOUND"));
@@ -152,39 +151,54 @@ class FilesApiIntegrationTest extends IntegrationTest {
         UUID ownerId = UUID.randomUUID();
         String fileId = uploadCsv(ownerId).get("id").asString();
 
-        mockMvc.perform(delete("/api/v1/files/{id}", fileId)
+        perform(delete("/api/v1/files/{id}", fileId)
                         .header(HttpHeaders.AUTHORIZATION, bearer(TestJwt.userToken(UUID.randomUUID()))))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("FORBIDDEN"));
 
-        mockMvc.perform(delete("/api/v1/files/{id}", fileId)
+        perform(delete("/api/v1/files/{id}", fileId)
                         .header(HttpHeaders.AUTHORIZATION, bearer(TestJwt.adminToken(UUID.randomUUID()))))
                 .andExpect(status().isNoContent());
     }
 
     @Test
-    void uploadRejectsDisallowedTypeEmptyFileUnknownBucketAndMissingPart() throws Exception {
-        String token = TestJwt.userToken(UUID.randomUUID());
-
-        upload(token, "IMPORTS", new MockMultipartFile("file", "pic.png", "image/png", new byte[] {1, 2, 3, 4}))
+    void uploadDisallowedType_returns415ContentTypeNotAllowed() throws Exception {
+        upload(TestJwt.userToken(UUID.randomUUID()), "IMPORTS", pngFile("image/png"))
                 .andExpect(status().isUnsupportedMediaType())
                 .andExpect(jsonPath("$.code").value("CONTENT_TYPE_NOT_ALLOWED"));
+    }
 
-        upload(token, "IMPORTS", csvFile(new byte[0]))
+    @Test
+    void uploadEmptyFile_returns400EmptyFile() throws Exception {
+        upload(TestJwt.userToken(UUID.randomUUID()), "IMPORTS", csvFile(new byte[0]))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("EMPTY_FILE"));
+    }
 
-        upload(token, "NOT_A_BUCKET", csvFile(CSV_BYTES))
+    @Test
+    void uploadUnknownBucket_returns400BadRequest() throws Exception {
+        upload(TestJwt.userToken(UUID.randomUUID()), "NOT_A_BUCKET", csvFile(CSV_BYTES))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("BAD_REQUEST"));
+    }
 
-        upload(token, "IMPORTS", null)
-                .andExpect(status().isBadRequest());
+    @Test
+    void uploadMissingFilePart_returns400BadRequest() throws Exception {
+        upload(TestJwt.userToken(UUID.randomUUID()), "IMPORTS", null)
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("BAD_REQUEST"));
+    }
+
+    @Test
+    void uploadPngBytesAsCsv_returns415ContentMismatch() throws Exception {
+        upload(TestJwt.userToken(UUID.randomUUID()), "IMPORTS", pngFile(CSV_TYPE))
+                .andExpect(status().isUnsupportedMediaType())
+                .andExpect(jsonPath("$.code").value("CONTENT_MISMATCH"));
     }
 
     @Test
     void requestWithoutToken_returnsUnauthorized() throws Exception {
-        mockMvc.perform(get("/api/v1/files/{id}", UUID.randomUUID()))
+        perform(get("/api/v1/files/{id}", UUID.randomUUID()))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -215,7 +229,7 @@ class FilesApiIntegrationTest extends IntegrationTest {
         if (token != null) {
             request.header(HttpHeaders.AUTHORIZATION, bearer(token));
         }
-        return mockMvc.perform(request);
+        return perform(request);
     }
 
     private JsonNode readBody(MvcResult result) throws Exception {
@@ -224,6 +238,10 @@ class FilesApiIntegrationTest extends IntegrationTest {
 
     private static MockMultipartFile csvFile(byte[] content) {
         return new MockMultipartFile("file", CSV_NAME, CSV_TYPE, content);
+    }
+
+    private static MockMultipartFile pngFile(String contentType) {
+        return new MockMultipartFile("file", "pic.png", contentType, PNG_BYTES);
     }
 
     private static String bearer(String token) {

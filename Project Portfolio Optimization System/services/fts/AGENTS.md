@@ -7,7 +7,9 @@ Package root `com.portfolio.fts`. Port **8083**. Only wrapper over MinIO in this
 
 File transfer for Portfolio:
 
-- Metadata in PostgreSQL schema `fts` (same instance as core); bytes in MinIO
+- Internal only: gateway does not route `/api/files/**`; browsers never call FTS.
+  Uploads go browser → core → FTS. Downloads: core checks domain rights, then requests a presigned URL from FTS
+- Metadata in PostgreSQL schema `fts` (same instance as core); bytes in MinIO. Owner is `owner_id` (`ownerId` UUID in API)
 - Buckets `IMPORTS` / `REPORTS` / `ATTACHMENTS` → `fts-imports`, `fts-reports`, `fts-attachments` (created on start)
 - Object key = UUID; client filename is metadata only; sha256 hashed on upload
 - JWT validate-only via `common-security`; `common-web` only for `BaseEntity` (no CRUD kit)
@@ -76,14 +78,26 @@ RFC 9457 `ProblemDetail` + property `code`:
 | Status | `code` |
 |--------|--------|
 | 404 | `FILE_NOT_FOUND` |
-| 400 | `EMPTY_FILE`, `BAD_REQUEST` |
-| 415 | `CONTENT_TYPE_NOT_ALLOWED` |
+| 400 | `EMPTY_FILE`, `BAD_REQUEST`, `UPLOAD_READ_FAILED` |
+| 415 | `CONTENT_TYPE_NOT_ALLOWED`, `CONTENT_MISMATCH` |
 | 413 | `FILE_TOO_LARGE` |
 | 403 | `FORBIDDEN` |
 | 503 | `STORAGE_UNAVAILABLE` |
 | 401 | `UNAUTHORIZED` (from `common-security`) |
 
-Delete: uploader or `ADMIN`. Read: any authenticated user. Soft-deleted files are 404.
+Delete: owner (`ownerId`) or `ADMIN`. Read: any valid JWT (core/finance with the user's token). Soft-deleted files are 404.
+
+## Content signature
+
+First bytes vs declared type (no Tika). Head size 8 KiB. Mismatch → 415 `CONTENT_MISMATCH`.
+
+| Declared type | Rule |
+|---------------|------|
+| PDF | magic `%PDF-` |
+| PNG | `89 50 4E 47 0D 0A 1A 0A` |
+| JPEG | `FF D8 FF` |
+| OOXML (xlsx/docx) | `PK 03 04` |
+| `text/csv`, `text/plain` | first 8 KiB: no `00` byte, valid UTF-8 (truncated last character allowed) |
 
 ## Do / Don't
 
@@ -92,10 +106,11 @@ Delete: uploader or `ADMIN`. Read: any authenticated user. Soft-deleted files ar
 - Talk to MinIO only from this service; other services use `fileId`
 - Treat files as immutable (new version = new id)
 - Soft-delete (`deleted_at`); never rewrite object bytes
-- Enforce per-bucket `max-size` and content-type allow-list
+- Enforce per-bucket `max-size`, content-type allow-list, and magic-byte signature
 
 **Don't**
 
+- Expose FTS to browsers or add a gateway route for `/api/files/**`
 - Give other services MinIO credentials or endpoints
 - Version, share, or ACL individual objects here
 - Introduce `BigDecimal` — FTS stores bytes and metadata, not money

@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -48,7 +49,10 @@ class FileServiceTest {
     private static final Instant FIXED_NOW = Instant.parse("2026-01-15T12:00:00Z");
     private static final Clock CLOCK = Clock.fixed(FIXED_NOW, ZoneOffset.UTC);
     private static final Duration DOWNLOAD_TTL = Duration.ofMinutes(15);
-    private static final byte[] CSV_BYTES = "hello".getBytes();
+    private static final byte[] CSV_BYTES = csv("hello");
+    private static final byte[] PNG_MAGIC = {
+        (byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A
+    };
     private static final String CSV_SHA256 =
             "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824";
     private static final String PHYSICAL_IMPORTS = "fts-imports";
@@ -71,7 +75,8 @@ class FileServiceTest {
                 Map.of(
                         FileBucket.IMPORTS,
                         new BucketPolicy(PHYSICAL_IMPORTS, DataSize.ofBytes(10), Set.of("text/csv"))));
-        fileService = new FileService(files, new FileMapperImpl(), storage, properties, security, CLOCK);
+        fileService = new FileService(
+                files, new FileMapperImpl(), storage, new ContentSignatureVerifier(), properties, security, CLOCK);
     }
 
     @Test
@@ -97,6 +102,24 @@ class FileServiceTest {
         assertThat(response.contentType()).isEqualTo("text/csv");
         assertThat(response.originalName()).isEqualTo("report.csv");
         assertThat(response.id()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("upload sets ownerId from SecuritySupport.requireUserId and exposes it on the response")
+    void upload_setsOwnerIdFromCurrentUserAndExposesItOnResponse() {
+        // given
+        UUID ownerId = UUID.randomUUID();
+        stubSaveReturnsArgumentWithId(ownerId);
+        MultipartFile file = csvFile("report.csv", "text/csv", CSV_BYTES);
+
+        // when
+        FileResponse response = fileService.upload(FileBucket.IMPORTS, file);
+
+        // then
+        ArgumentCaptor<FileEntity> saved = ArgumentCaptor.forClass(FileEntity.class);
+        verify(files).save(saved.capture());
+        assertThat(saved.getValue().getOwnerId()).isEqualTo(ownerId);
+        assertThat(response.ownerId()).isEqualTo(ownerId);
     }
 
     @Test
@@ -158,6 +181,20 @@ class FileServiceTest {
     }
 
     @Test
+    @DisplayName("PNG bytes declared as text/csv are rejected as CONTENT_MISMATCH and nothing is stored")
+    void upload_pngBytesDeclaredAsCsv_throwsContentMismatchAndStoresNothing() {
+        // given
+        MultipartFile file = csvFile("report.csv", "text/csv", PNG_MAGIC);
+
+        // when / then
+        assertFtsError(
+                () -> fileService.upload(FileBucket.IMPORTS, file),
+                "CONTENT_MISMATCH",
+                HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+        assertNothingStoredOrSaved();
+    }
+
+    @Test
     @DisplayName("original filename path is stripped to the basename")
     void upload_stripsPathFromOriginalFilename() {
         // given
@@ -186,6 +223,56 @@ class FileServiceTest {
     }
 
     @Test
+    @DisplayName("repository save failure is rethrown and the uploaded object is deleted")
+    void upload_saveFails_deletesStoredObjectAndRethrowsOriginal() {
+        // given
+        RuntimeException saveFailed = new IllegalStateException("db down");
+        when(security.requireUserId()).thenReturn(UUID.randomUUID());
+        when(files.save(any(FileEntity.class))).thenThrow(saveFailed);
+        MultipartFile file = csvFile("report.csv", "text/csv", CSV_BYTES);
+
+        // when / then
+        assertThatThrownBy(() -> fileService.upload(FileBucket.IMPORTS, file)).isSameAs(saveFailed);
+        assertThat(storage.isEmpty()).isTrue();
+    }
+
+    @Test
+    @DisplayName("save failure is rethrown with a storage delete failure in getSuppressed")
+    void upload_saveFailsAndDeleteFails_rethrowsOriginalWithDeleteFailureSuppressed() {
+        // given
+        RuntimeException saveFailed = new IllegalStateException("db down");
+        RuntimeException deleteFailed = new IllegalStateException("minio down");
+        when(security.requireUserId()).thenReturn(UUID.randomUUID());
+        when(files.save(any(FileEntity.class))).thenThrow(saveFailed);
+        storage.failDeletesWith(deleteFailed);
+        MultipartFile file = csvFile("report.csv", "text/csv", CSV_BYTES);
+
+        // when / then
+        assertThatThrownBy(() -> fileService.upload(FileBucket.IMPORTS, file))
+                .isSameAs(saveFailed)
+                .hasSuppressedException(deleteFailed);
+    }
+
+    @Test
+    @DisplayName("IOException from MultipartFile.getInputStream is mapped to UPLOAD_READ_FAILED")
+    void upload_inputStreamThrows_throwsUploadReadFailed() {
+        // given
+        MultipartFile file = new MockMultipartFile("file", "report.csv", "text/csv", CSV_BYTES) {
+            @Override
+            public InputStream getInputStream() throws IOException {
+                throw new IOException("stream broken");
+            }
+        };
+
+        // when / then
+        assertFtsError(
+                () -> fileService.upload(FileBucket.IMPORTS, file),
+                "UPLOAD_READ_FAILED",
+                HttpStatus.BAD_REQUEST);
+        assertNothingStoredOrSaved();
+    }
+
+    @Test
     @DisplayName("getMetadata of a missing file throws FILE_NOT_FOUND")
     void getMetadata_missingFile_throwsFileNotFound() {
         // given
@@ -211,7 +298,7 @@ class FileServiceTest {
     @DisplayName("createDownloadUrl expires at fixed now plus configured TTL")
     void createDownloadUrl_expiresAtIsFixedNowPlusTtl() {
         // given
-        FileEntity entity = activeFile(UUID.randomUUID(), UUID.randomUUID().toString());
+        FileEntity entity = activeFile(UUID.randomUUID(), UUID.randomUUID());
         when(files.findByIdAndDeletedAtIsNull(entity.getId())).thenReturn(Optional.of(entity));
 
         // when
@@ -228,7 +315,7 @@ class FileServiceTest {
     void delete_byOwner_setsDeletedAtToFixedNow() {
         // given
         UUID ownerId = UUID.randomUUID();
-        FileEntity entity = activeFile(UUID.randomUUID(), ownerId.toString());
+        FileEntity entity = activeFile(UUID.randomUUID(), ownerId);
         when(files.findByIdAndDeletedAtIsNull(entity.getId())).thenReturn(Optional.of(entity));
         when(security.requireUserId()).thenReturn(ownerId);
 
@@ -245,7 +332,7 @@ class FileServiceTest {
         // given
         UUID ownerId = UUID.randomUUID();
         UUID adminId = UUID.randomUUID();
-        FileEntity entity = activeFile(UUID.randomUUID(), ownerId.toString());
+        FileEntity entity = activeFile(UUID.randomUUID(), ownerId);
         when(files.findByIdAndDeletedAtIsNull(entity.getId())).thenReturn(Optional.of(entity));
         when(security.requireUserId()).thenReturn(adminId);
         when(security.requireRole()).thenReturn("ADMIN");
@@ -263,7 +350,7 @@ class FileServiceTest {
         // given
         UUID ownerId = UUID.randomUUID();
         UUID otherId = UUID.randomUUID();
-        FileEntity entity = activeFile(UUID.randomUUID(), ownerId.toString());
+        FileEntity entity = activeFile(UUID.randomUUID(), ownerId);
         when(files.findByIdAndDeletedAtIsNull(entity.getId())).thenReturn(Optional.of(entity));
         when(security.requireUserId()).thenReturn(otherId);
         when(security.requireRole()).thenReturn("USER");
@@ -274,6 +361,11 @@ class FileServiceTest {
     }
 
     private void stubSaveReturnsArgumentWithId() {
+        stubSaveReturnsArgumentWithId(UUID.randomUUID());
+    }
+
+    private void stubSaveReturnsArgumentWithId(UUID ownerId) {
+        when(security.requireUserId()).thenReturn(ownerId);
         when(files.save(any(FileEntity.class))).thenAnswer(invocation -> {
             FileEntity entity = invocation.getArgument(0);
             entity.setId(UUID.randomUUID());
@@ -281,7 +373,7 @@ class FileServiceTest {
         });
     }
 
-    private FileEntity activeFile(UUID id, String createdBy) {
+    private FileEntity activeFile(UUID id, UUID ownerId) {
         FileEntity entity = new FileEntity();
         entity.setId(id);
         entity.setBucket(FileBucket.IMPORTS);
@@ -290,8 +382,12 @@ class FileServiceTest {
         entity.setContentType("text/csv");
         entity.setSizeBytes(CSV_BYTES.length);
         entity.setSha256(CSV_SHA256);
-        entity.setCreatedBy(createdBy);
+        entity.setOwnerId(ownerId);
         return entity;
+    }
+
+    private static byte[] csv(String text) {
+        return text.getBytes(StandardCharsets.UTF_8);
     }
 
     private static MockMultipartFile csvFile(String originalFilename, String contentType, byte[] content) {
@@ -317,6 +413,7 @@ class FileServiceTest {
     static final class InMemoryObjectStorage implements ObjectStorage {
 
         private final Map<String, StoredObject> objects = new LinkedHashMap<>();
+        private RuntimeException deleteFailure;
 
         boolean isEmpty() {
             return objects.isEmpty();
@@ -332,6 +429,10 @@ class FileServiceTest {
             StoredObject stored = objects.get(storageKey(bucket, objectKey));
             assertThat(stored).as("object %s/%s", bucket, objectKey).isNotNull();
             return stored.contentType();
+        }
+
+        void failDeletesWith(RuntimeException failure) {
+            this.deleteFailure = failure;
         }
 
         @Override
@@ -355,6 +456,14 @@ class FileServiceTest {
                 throw new IllegalStateException("Missing object " + bucket + "/" + objectKey);
             }
             return new ByteArrayInputStream(stored.bytes());
+        }
+
+        @Override
+        public void delete(String bucket, String objectKey) {
+            if (deleteFailure != null) {
+                throw deleteFailure;
+            }
+            objects.remove(storageKey(bucket, objectKey));
         }
 
         @Override
