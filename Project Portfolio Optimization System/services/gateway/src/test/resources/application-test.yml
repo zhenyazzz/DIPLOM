@@ -1,0 +1,12 @@
+portfolio:
+  security:
+    jwt:
+      # Must match com.portfolio.gateway.support.TestJwt.SECRET
+      secret: gateway-integration-test-jwt-secret-at-least-40-bytes!!
+
+gateway:
+  cors:
+    allowed-origins: http://localhost:5173
+  login-rate-limit:
+    capacity: 3
+    window: 1m
