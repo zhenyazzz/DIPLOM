@@ -8,3 +8,5 @@ OpenAPI-спецификации и схемы событий — только �
 |---------|------------|
 | [`openapi/`](openapi/) | OpenAPI (HTTP API) |
 | [`events/`](events/) | Схемы событий (async / messaging) |
+
+[`openapi/fts-v1.yaml`](openapi/fts-v1.yaml) — FTS `/api/v1/files`.
