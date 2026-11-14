@@ -25,11 +25,11 @@ browser ──► nginx :80 (статика SPA; /api/** → gateway)
                  │
                  ▼
           gateway :8090 (Spring Cloud Gateway)
-           ├─ /api/files/** ──► fts :8083 ──── MinIO + PG(schema fts)
            └─ /api/**       ──► core :8080 ─── PG(schema core)
                                  ├─► calc    :8081  stateless
                                  ├─► finance :8082  stateless ──► fts
-                                 └─► fts
+                                 └─► fts     :8083 ──── MinIO + PG(schema fts)
+                                     (только docker-сеть: core, finance)
 ```
 
 | Компонент | Ответственность | Не делает |
@@ -39,7 +39,7 @@ browser ──► nginx :80 (статика SPA; /api/** → gateway)
 | **core** | Auth (выдача JWT), пользователи/роли, справочники, проекты, критерии/оценки (хранение), импорты/снимки (хранение), сценарии, запуски оптимизации, утверждение, аудит, отчёты, уведомления | SAW, knapsack, парсинг CSV/XLSX, хранение байтов файлов |
 | **calc** | SAW (нормализация + вклад критериев), бинарная оптимизация 0-1 | Хранение, пользователей |
 | **finance** | Парсинг/валидация CSV/XLSX (файл берёт из FTS по `fileId`) → строки + протокол ошибок; расчёт NPV | Хранение снимков |
-| **fts** | Загрузка/выдача/метаданные/soft-delete файлов; sha256; presigned URL на скачивание | Доменную логику, разбор содержимого |
+| **fts** | Внутренний: загрузка/выдача/метаданные/soft-delete; sha256; presigned URL | Доменную логику, разбор содержимого |
 
 Безопасность: gateway проверяет JWT рано, но каждый сервис **всё равно** валидирует его через `common-security`
 (defense in depth; сервис не доверяет сети). Межсервисные вызовы передают токен пользователя. Наружу открыт
@@ -47,12 +47,18 @@ browser ──► nginx :80 (статика SPA; /api/** → gateway)
 
 ### FTS
 
-- Метаданные — таблица `files` (id, bucket, object_key, original_name, size, content_type, sha256, owner_service,
-  created_by, created_at, deleted_at) в схеме `fts`; байты — в MinIO.
+- Внутренний сервис: браузер в FTS не ходит, gateway не маршрутизирует `/api/files/**`.
+  Доступен только в docker-сети для core и finance.
+- Загрузка: browser → core → FTS. Core проверяет права на доменный объект (импорт, отчёт, вложение)
+  и вызывает FTS; браузер скачивает по presigned URL, который core запрашивает у FTS после проверки прав.
+- Метаданные — таблица `files` (id, bucket, object_key, original_name, size, content_type, sha256, owner_id,
+  owner_service, created_by, created_at, deleted_at) в схеме `fts`; байты — в MinIO.
 - Бакеты по назначению: `imports`, `reports`, `attachments`. Ключ объекта генерирует FTS (UUID), имя файла из запроса — только метаданные.
-- Лимиты: размер и allow-list content-type на бакет (конфиг).
+- Лимиты: размер и allow-list content-type на бакет (конфиг). Сигнатура первых байт сверяется с заявленным типом (без Tika):
+  PDF `%PDF-`, PNG `89 50 4E 47 0D 0A 1A 0A`, JPEG `FF D8 FF`, OOXML (xlsx/docx) `PK 03 04`;
+  `text/csv`/`text/plain` — первые 8 КБ без байта `00` и валидный UTF-8. Несовпадение → 415 `CONTENT_MISMATCH`.
 - Файл неизменяем: новая версия = новый `fileId`. Снимок финансов ссылается на `fileId` + sha256 → воспроизводимость.
-- Доступ на чтение: сервисы — по `fileId`; браузер — presigned URL с коротким TTL, который выдаёт core/FTS после проверки прав.
+- Доступ внутри FTS: читать — любой валидный JWT (core/finance с токеном пользователя); удалять — владелец (`owner_id`) или `ADMIN`.
 
 ---
 
@@ -84,7 +90,7 @@ services/<svc>/
 
 **План отката:** при нехватке времени `finance-impl` подключается в core как библиотека, а адаптер `FinanceClient`
 переключается с HTTP на локальный вызов (`portfolio.finance.mode=embedded|remote`). Контракт не меняется.
-Gateway при необходимости заменяется nginx-маршрутами (`/api/files/**` → fts, `/api/**` → core) без изменений в сервисах.
+Gateway при необходимости заменяется nginx-маршрутами (`/api/**` → core) без изменений в сервисах.
 Calc и FTS остаются отдельными процессами → требование «≥2 компонента» сохраняется.
 
 ---
@@ -145,7 +151,6 @@ com.portfolio.core
 | Префикс | Куда | JWT на gateway |
 |---------|------|----------------|
 | `/api/auth/**` | core | нет (rate-limit на login) |
-| `/api/files/**` | fts (только `GET …/download-url`-ссылки и метаданные) | да |
 | `/api/**` | core | да |
 
 ### frontend → core (`core-v1`, основные группы)
@@ -188,7 +193,7 @@ com.portfolio.core
 | finance | `import_sessions` (fileId, sha256), `import_errors`, `financial_snapshots`, `cash_flows` |
 | portfolio | `scenarios`, `scenario_items`, `optimization_runs`, `run_items`, `approvals`, `reports` (fileId) |
 | activity | `audit_log`, `notifications` |
-| **fts** (схема `fts`) | `files` |
+| **fts** (схема `fts`) | `files` (+ `owner_id`) |
 
 Каждый модуль владеет своими таблицами и Flyway-миграциями (префикс версии по модулю); чужие таблицы читаются только через API модуля.
 Один экземпляр PostgreSQL, отдельные схемы `core` и `fts` с отдельными пользователями БД. Ссылки на `fileId` между схемами — без FK.
@@ -230,4 +235,4 @@ com.portfolio.core
 | Q-DOM-02/05 | Периоды и валюты | v1: один бюджет, одна валюта |
 | BOOT-ADMIN | Seed Admin | перейти на env-bootstrap «только на пустой БД» |
 | GW-STACK | Spring Cloud Gateway: WebFlux или Server WebMVC | Server WebMVC (тот же стек, что у сервисов); проверить совместимость с Boot 4.1 |
-| FTS-UPLOAD | Загрузка из браузера напрямую в FTS или через core | через core (core проверяет права и сразу связывает fileId с сущностью) |
+| FTS-UPLOAD | Загрузка из браузера напрямую в FTS или через core | **решено:** через core (core проверяет права и сразу связывает fileId с сущностью) |

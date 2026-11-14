@@ -14,6 +14,8 @@ public interface ObjectStorage {
 
     void put(String bucket, String objectKey, InputStream content, long size, String contentType);
 
+    void delete(String bucket, String objectKey);
+
     InputStream get(String bucket, String objectKey);
 
     URI presignedDownloadUrl(String bucket, String objectKey, String downloadName, Duration ttl);

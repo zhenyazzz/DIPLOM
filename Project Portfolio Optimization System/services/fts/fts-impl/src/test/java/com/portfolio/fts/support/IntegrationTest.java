@@ -1,10 +1,14 @@
 package com.portfolio.fts.support;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.RequestBuilder;
+import org.springframework.test.web.servlet.ResultActions;
 import org.testcontainers.containers.MinIOContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -35,5 +39,16 @@ public abstract class IntegrationTest {
         registry.add("fts.minio.public-endpoint", MINIO::getS3URL);
         registry.add("fts.minio.access-key", MINIO::getUserName);
         registry.add("fts.minio.secret-key", MINIO::getPassword);
+    }
+
+    @Autowired
+    protected MockMvc mockMvc;
+
+    /**
+     * Every FTS MockMvc response is checked against {@code contracts/openapi/fts-v1.yaml}.
+     * The outbound MinIO GET of a presigned URL is not an FTS endpoint and must not go through this helper.
+     */
+    protected ResultActions perform(RequestBuilder request) throws Exception {
+        return mockMvc.perform(request).andExpect(OpenApiContract.validResponse());
     }
 }

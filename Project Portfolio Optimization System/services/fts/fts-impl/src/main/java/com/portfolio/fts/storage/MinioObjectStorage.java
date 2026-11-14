@@ -7,6 +7,7 @@ import io.minio.GetPresignedObjectUrlArgs;
 import io.minio.MakeBucketArgs;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
+import io.minio.RemoveObjectArgs;
 import io.minio.http.Method;
 import java.io.InputStream;
 import java.net.URI;
@@ -47,6 +48,17 @@ public class MinioObjectStorage implements ObjectStorage {
                     .object(objectKey)
                     .stream(content, size, -1)
                     .contentType(contentType)
+                    .build());
+            return null;
+        });
+    }
+
+    @Override
+    public void delete(String bucket, String objectKey) {
+        call("delete", bucket, objectKey, () -> {
+            client.removeObject(RemoveObjectArgs.builder()
+                    .bucket(bucket)
+                    .object(objectKey)
                     .build());
             return null;
         });

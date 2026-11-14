@@ -10,7 +10,6 @@ import com.portfolio.fts.error.FtsException;
 import com.portfolio.fts.storage.ObjectStorage;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.UncheckedIOException;
 import java.net.URI;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
@@ -21,10 +20,12 @@ import java.util.HexFormat;
 import java.util.Locale;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class FileService {
@@ -37,11 +38,11 @@ public class FileService {
     private final FileRepository files;
     private final FileMapper fileMapper;
     private final ObjectStorage objectStorage;
+    private final ContentSignatureVerifier verifier;
     private final FtsProperties properties;
     private final SecuritySupport security;
     private final Clock clock;
 
-    @Transactional
     public FileResponse upload(FileBucket bucket, MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw FtsException.emptyFile();
@@ -56,17 +57,14 @@ public class FileService {
             throw FtsException.fileTooLarge(policy.maxSize());
         }
 
-        String objectKey = UUID.randomUUID().toString();
-        String sha256 = storeAndHash(policy.name(), objectKey, file, contentType);
+        requireMatchingSignature(contentType, file);
 
-        FileEntity entity = new FileEntity();
-        entity.setBucket(bucket);
-        entity.setObjectKey(objectKey);
-        entity.setOriginalName(sanitizeOriginalName(file.getOriginalFilename()));
-        entity.setContentType(contentType);
-        entity.setSizeBytes(file.getSize());
-        entity.setSha256(sha256);
-        return fileMapper.toResponse(files.save(entity));
+        String objectKey = UUID.randomUUID().toString();
+        String physicalBucket = policy.name();
+        UUID ownerId = security.requireUserId();
+        String sha256 = storeAndHash(physicalBucket, objectKey, file, contentType);
+        FileEntity entity = newFile(bucket, objectKey, file, contentType, sha256, ownerId);
+        return persistOrDeleteObject(physicalBucket, objectKey, entity);
     }
 
     @Transactional(readOnly = true)
@@ -100,13 +98,66 @@ public class FileService {
         file.markDeleted(clock.instant());
     }
 
+    private void requireMatchingSignature(String contentType, MultipartFile file) {
+        byte[] head = readHead(file);
+        if (!verifier.matches(contentType, head)) {
+            throw FtsException.contentMismatch(contentType);
+        }
+    }
+
+    private static byte[] readHead(MultipartFile file) {
+        try {
+            return file.getInputStream().readNBytes(ContentSignatureVerifier.HEAD_SIZE);
+        } catch (IOException ex) {
+            throw FtsException.uploadReadFailed();
+        }
+    }
+
+    private FileEntity newFile(
+            FileBucket bucket,
+            String objectKey,
+            MultipartFile file,
+            String contentType,
+            String sha256,
+            UUID ownerId) {
+        FileEntity entity = new FileEntity();
+        entity.setBucket(bucket);
+        entity.setObjectKey(objectKey);
+        entity.setOriginalName(sanitizeOriginalName(file.getOriginalFilename()));
+        entity.setContentType(contentType);
+        entity.setSizeBytes(file.getSize());
+        entity.setSha256(sha256);
+        entity.setOwnerId(ownerId);
+        return entity;
+    }
+
+    private FileResponse persistOrDeleteObject(String bucket, String objectKey, FileEntity entity) {
+        FileEntity saved;
+        try {
+            saved = files.save(entity);
+        } catch (RuntimeException ex) {
+            deleteUploadedObject(bucket, objectKey, ex);
+            throw ex;
+        }
+        return fileMapper.toResponse(saved);
+    }
+
+    private void deleteUploadedObject(String bucket, String objectKey, RuntimeException original) {
+        try {
+            objectStorage.delete(bucket, objectKey);
+        } catch (RuntimeException deleteFailed) {
+            log.warn("Failed to delete object {}/{} after save failure", bucket, objectKey, deleteFailed);
+            original.addSuppressed(deleteFailed);
+        }
+    }
+
     private FileEntity requireActive(UUID fileId) {
         return files.findByIdAndDeletedAtIsNull(fileId)
                 .orElseThrow(() -> FtsException.fileNotFound(fileId));
     }
 
     private void requireDeletePermission(FileEntity file) {
-        if (file.isOwnedBy(security.requireUserId().toString())) {
+        if (file.isOwnedBy(security.requireUserId())) {
             return;
         }
         if (ADMIN_ROLE.equals(security.requireRole())) {
@@ -124,7 +175,7 @@ public class FileService {
             objectStorage.put(bucket, objectKey, digested, file.getSize(), contentType);
             return HexFormat.of().formatHex(digested.getMessageDigest().digest());
         } catch (IOException ex) {
-            throw new UncheckedIOException("Failed to read uploaded content", ex);
+            throw FtsException.uploadReadFailed();
         }
     }
 

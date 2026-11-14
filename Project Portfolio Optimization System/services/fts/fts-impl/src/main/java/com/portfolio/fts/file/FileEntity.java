@@ -8,6 +8,7 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -36,13 +37,16 @@ public class FileEntity extends BaseEntity {
     @Column(nullable = false, length = 64)
     private String sha256;
 
+    @Column(nullable = false)
+    private UUID ownerId;
+
     private Instant deletedAt;
 
     public void markDeleted(Instant when) {
         this.deletedAt = when;
     }
 
-    public boolean isOwnedBy(String userId) {
-        return userId != null && userId.equals(getCreatedBy());
+    public boolean isOwnedBy(UUID userId) {
+        return userId != null && userId.equals(ownerId);
     }
 }

@@ -2,7 +2,10 @@ openapi: 3.1.0
 info:
   title: Portfolio FTS — Files API
   version: 1.0.0
-  description: File transfer service. Immutable objects; a new version is a new id.
+  description: |
+    File transfer service. Immutable objects; a new version is a new id.
+    Internal service called by core and finance, not exposed to browsers;
+    browsers download via presigned URLs issued through core.
 servers:
   - url: http://localhost:8083
     description: Local FTS
@@ -63,7 +66,7 @@ paths:
     delete:
       tags: [Files]
       operationId: delete
-      summary: Soft-delete a file (uploader or ADMIN)
+      summary: Soft-delete a file (owner or ADMIN)
       responses:
         '204':
           description: Deleted
@@ -83,7 +86,7 @@ paths:
       summary: Download file bytes
       responses:
         '200':
-          description: File body
+          description: File body, served with the content type stored at upload.
           headers:
             Content-Disposition:
               required: true
@@ -92,7 +95,7 @@ paths:
                 examples:
                   - 'attachment; filename="report.pdf"'
           content:
-            application/octet-stream:
+            '*/*':
               schema:
                 type: string
                 format: binary
@@ -148,7 +151,7 @@ components:
 
   responses:
     BadRequest:
-      description: '`EMPTY_FILE` or `BAD_REQUEST`'
+      description: '`EMPTY_FILE`, `UPLOAD_READ_FAILED` (multipart unreadable) or `BAD_REQUEST`'
       content:
         application/problem+json:
           schema:
@@ -178,7 +181,9 @@ components:
           schema:
             $ref: '#/components/schemas/Problem'
     ContentTypeNotAllowed:
-      description: '`CONTENT_TYPE_NOT_ALLOWED`'
+      description: |
+        `CONTENT_TYPE_NOT_ALLOWED` (type not in the bucket allow-list) or
+        `CONTENT_MISMATCH` (declared type does not match file signature)
       content:
         application/problem+json:
           schema:
@@ -213,7 +218,7 @@ components:
         - contentType
         - size
         - sha256
-        - createdBy
+        - ownerId
         - createdAt
       properties:
         id:
@@ -230,8 +235,9 @@ components:
           format: int64
         sha256:
           type: string
-        createdBy:
+        ownerId:
           type: string
+          format: uuid
         createdAt:
           type: string
           format: date-time
@@ -251,11 +257,12 @@ components:
     Problem:
       type: object
       additionalProperties: true
-      required: [type, title, status, detail, instance, code]
+      description: RFC 9457 problem; `type` is omitted when it is `about:blank`.
+      required: [title, status, code]
       properties:
         type:
           type: string
-          format: uri
+          format: uri-reference
         title:
           type: string
         status:
@@ -264,13 +271,15 @@ components:
           type: string
         instance:
           type: string
-          format: uri
+          format: uri-reference
         code:
           type: string
           enum:
             - FILE_NOT_FOUND
             - EMPTY_FILE
+            - UPLOAD_READ_FAILED
             - CONTENT_TYPE_NOT_ALLOWED
+            - CONTENT_MISMATCH
             - FILE_TOO_LARGE
             - FORBIDDEN
             - STORAGE_UNAVAILABLE
