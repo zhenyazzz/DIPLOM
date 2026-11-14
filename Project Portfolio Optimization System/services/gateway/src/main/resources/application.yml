@@ -1,0 +1,52 @@
+server:
+  port: ${GATEWAY_PORT:8090}
+  # Behind nginx: trust X-Forwarded-* so getRemoteAddr() is the client IP (login rate-limit key).
+  forward-headers-strategy: framework
+
+spring:
+  application:
+    name: portfolio-gateway
+  http:
+    clients:
+      connect-timeout: ${GATEWAY_CORE_CONNECT_TIMEOUT:2s}
+      read-timeout: ${GATEWAY_CORE_READ_TIMEOUT:30s}
+  cloud:
+    gateway:
+      server:
+        webmvc:
+          # Paths are forwarded as-is (no StripPrefix): core's refresh cookie uses Path=/api/v1/auth
+          # and core's permit-all matches /api/v1/auth/*. FTS (/api/v1/files/**) is blocked by InternalPathsFilter.
+          routes:
+            - id: core-auth
+              uri: ${CORE_URL:http://localhost:8080}
+              predicates:
+                - Path=/api/v1/auth/**
+            - id: core
+              uri: ${CORE_URL:http://localhost:8080}
+              predicates:
+                - Path=/api/**
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+
+portfolio:
+  security:
+    jwt:
+      secret: ${CORE_JWT_SECRET:}
+    # Same public auth endpoints as core; everything else under /api/** needs a valid JWT.
+    permit-all:
+      - POST:/api/v1/auth/register
+      - POST:/api/v1/auth/login
+      - POST:/api/v1/auth/refresh
+      - POST:/api/v1/auth/logout
+      - GET:/actuator/health
+
+gateway:
+  cors:
+    allowed-origins: ${GATEWAY_CORS_ALLOWED_ORIGINS:http://localhost:5173}
+  login-rate-limit:
+    capacity: ${GATEWAY_LOGIN_RATE_LIMIT_CAPACITY:5}
+    window: ${GATEWAY_LOGIN_RATE_LIMIT_WINDOW:1m}

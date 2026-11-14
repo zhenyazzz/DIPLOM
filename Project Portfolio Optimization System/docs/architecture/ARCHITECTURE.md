@@ -35,7 +35,7 @@ browser ──► nginx :80 (статика SPA; /api/** → gateway)
 | Компонент | Ответственность | Не делает |
 |-----------|-----------------|-----------|
 | **frontend** | React + TS SPA; nginx раздаёт статику и проксирует `/api` в gateway | Бизнес-логику |
-| **gateway** | Маршруты по префиксу, CORS, rate-limit на `/auth/login`, `X-Request-Id`, проверка JWT (кроме `/auth/*`) | Бизнес-логику, выдачу токенов |
+| **gateway** | Маршруты по префиксу, CORS, rate-limit на `POST /api/v1/auth/login`, `X-Request-Id`, проверка JWT (кроме `/api/v1/auth/*`) | Бизнес-логику, выдачу токенов |
 | **core** | Auth (выдача JWT), пользователи/роли, справочники, проекты, критерии/оценки (хранение), импорты/снимки (хранение), сценарии, запуски оптимизации, утверждение, аудит, отчёты, уведомления | SAW, knapsack, парсинг CSV/XLSX, хранение байтов файлов |
 | **calc** | SAW (нормализация + вклад критериев), бинарная оптимизация 0-1 | Хранение, пользователей |
 | **finance** | Парсинг/валидация CSV/XLSX (файл берёт из FTS по `fileId`) → строки + протокол ошибок; расчёт NPV | Хранение снимков |
@@ -150,8 +150,9 @@ com.portfolio.core
 
 | Префикс | Куда | JWT на gateway |
 |---------|------|----------------|
-| `/api/auth/**` | core | нет (rate-limit на login) |
+| `/api/v1/auth/**` | core | нет (rate-limit на `POST /api/v1/auth/login`) |
 | `/api/**` | core | да |
+| `/api/v1/files/**` | — (404, внутренний FTS) | — |
 
 ### frontend → core (`core-v1`, основные группы)
 
@@ -234,5 +235,5 @@ com.portfolio.core
 | DEC-MATH-01 | TOPSIS | позже, отдельным endpoint в calc |
 | Q-DOM-02/05 | Периоды и валюты | v1: один бюджет, одна валюта |
 | BOOT-ADMIN | Seed Admin | перейти на env-bootstrap «только на пустой БД» |
-| GW-STACK | Spring Cloud Gateway: WebFlux или Server WebMVC | Server WebMVC (тот же стек, что у сервисов); проверить совместимость с Boot 4.1 |
+| GW-STACK | Spring Cloud Gateway: WebFlux или Server WebMVC | **решено:** Server WebMVC — servlet-стек, переиспользует common-security без изменений; Spring Cloud 2025.1.x (≥ 2025.1.2) для Boot 4.1 |
 | FTS-UPLOAD | Загрузка из браузера напрямую в FTS или через core | **решено:** через core (core проверяет права и сразу связывает fileId с сущностью) |
