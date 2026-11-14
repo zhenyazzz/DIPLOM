@@ -10,10 +10,6 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.json.JsonMapper;
 
-/**
- * Writes RFC 9457 Problem Details with a {@code code} property, same shape as
- * {@code ProblemDetailsAuthEntryPoint} in common-security: {@code status, title, detail, code}.
- */
 @Component
 public class ProblemResponses {
 

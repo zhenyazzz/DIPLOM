@@ -18,11 +18,6 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.servlet.HandlerExceptionResolver;
 import org.springframework.web.servlet.ModelAndView;
 
-/**
- * Maps failures talking to core into Problem Details instead of a 500/Whitelabel page:
- * connection refused / unknown host → 502 {@code UPSTREAM_UNAVAILABLE}; read timeout → 504 {@code UPSTREAM_TIMEOUT}.
- * Any other exception → {@code null} (let default resolvers handle it).
- */
 @Component
 public class UpstreamErrorResolver implements HandlerExceptionResolver, Ordered {
 
@@ -51,15 +46,13 @@ public class UpstreamErrorResolver implements HandlerExceptionResolver, Ordered 
         }
         try {
             problems.write(response, upstream.status(), upstream.code(), upstream.detail());
-        } catch (IOException e) {
-            // Body could not be written (client gone). The failure is still handled, so do not rethrow.
+        } catch (IOException ignored) {
         }
         return new ModelAndView();
     }
 
     private static Upstream classify(Throwable ex) {
         List<Throwable> chain = causeChain(ex);
-        // Connect-type failures first: HttpConnectTimeoutException is also a timeout, so it must win here.
         if (chain.stream().anyMatch(UpstreamErrorResolver::isConnectFailure)) {
             return UNAVAILABLE;
         }
@@ -83,7 +76,6 @@ public class UpstreamErrorResolver implements HandlerExceptionResolver, Ordered 
         return t instanceof SocketTimeoutException || t instanceof HttpTimeoutException;
     }
 
-    /** The exception followed by its causes, stopping at a cycle or after {@link #MAX_CAUSE_DEPTH} levels. */
     private static List<Throwable> causeChain(Throwable ex) {
         List<Throwable> chain = new ArrayList<>();
         Throwable current = ex;

@@ -6,7 +6,6 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 
-/** Test clock whose instant can be moved forward explicitly. Always UTC. */
 public final class MutableClock extends Clock {
 
     private volatile Instant instant;

@@ -17,10 +17,6 @@ public class WebConfig {
         return Clock.systemUTC();
     }
 
-    /**
-     * Bean name {@code corsConfigurationSource} lets Spring Security apply CORS inside the
-     * common-security filter chain, so preflight {@code OPTIONS} is answered before JWT checks.
-     */
     @Bean
     CorsConfigurationSource corsConfigurationSource(GatewayProperties properties) {
         CorsConfiguration cors = new CorsConfiguration();

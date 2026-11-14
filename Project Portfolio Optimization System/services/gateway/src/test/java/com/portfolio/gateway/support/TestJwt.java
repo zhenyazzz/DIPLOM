@@ -13,7 +13,6 @@ import java.util.UUID;
 
 public final class TestJwt {
 
-    /** Must match {@code portfolio.security.jwt.secret} in {@code application-test.yml}. */
     public static final String SECRET = "gateway-integration-test-jwt-secret-at-least-40-bytes!!";
 
     private TestJwt() {}

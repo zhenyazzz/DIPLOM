@@ -14,19 +14,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-/**
- * Fixed-window rate limit for {@code POST /api/v1/auth/login}, keyed by {@code request.getRemoteAddr()}
- * (real client IP thanks to {@code server.forward-headers-strategy: framework}). Over the limit →
- * 429 Problem Details {@code TOO_MANY_REQUESTS} with {@code Retry-After} (seconds until the window resets).
- * Other requests pass untouched. Runs before Spring Security.
- */
 @Component
 public class LoginRateLimitFilter extends OncePerRequestFilter implements Ordered {
 
     public static final int ORDER = Ordered.HIGHEST_PRECEDENCE + 20;
     public static final String LOGIN_PATH = "/api/v1/auth/login";
 
-    /** Above this many tracked clients, expired windows are purged before each insert. */
     private static final int MAX_TRACKED_CLIENTS = 10_000;
 
     private final GatewayProperties.LoginRateLimit limit;
@@ -76,7 +69,6 @@ public class LoginRateLimitFilter extends OncePerRequestFilter implements Ordere
         return ORDER;
     }
 
-    /** Request URI without the context path prefix. */
     private static String requestPath(HttpServletRequest request) {
         String uri = request.getRequestURI();
         String contextPath = request.getContextPath();
@@ -86,6 +78,5 @@ public class LoginRateLimitFilter extends OncePerRequestFilter implements Ordere
         return uri;
     }
 
-    /** Start of the current fixed window and number of attempts counted within it. */
     private record Window(long startMillis, int count) {}
 }

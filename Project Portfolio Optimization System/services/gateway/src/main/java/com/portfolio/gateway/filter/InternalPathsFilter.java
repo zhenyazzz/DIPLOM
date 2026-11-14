@@ -11,10 +11,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-/**
- * Internal-only APIs are never exposed through the gateway: {@code /api/v1/files} and {@code /api/v1/files/**}
- * (FTS) → 404 Problem Details {@code NOT_FOUND}, regardless of the token. Runs before Spring Security.
- */
 @Component
 public class InternalPathsFilter extends OncePerRequestFilter implements Ordered {
 
@@ -44,7 +40,6 @@ public class InternalPathsFilter extends OncePerRequestFilter implements Ordered
         return ORDER;
     }
 
-    /** Request URI without the context path prefix. */
     private static String requestPath(HttpServletRequest request) {
         String uri = request.getRequestURI();
         String contextPath = request.getContextPath();

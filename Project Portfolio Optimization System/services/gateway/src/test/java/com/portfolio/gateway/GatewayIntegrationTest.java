@@ -32,10 +32,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
-/**
- * Full HTTP scenario against the gateway with a fake core served by the JDK {@link HttpServer}.
- * Test methods are ordered: the core-down scenario stops the fake core and therefore runs last.
- */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
@@ -45,7 +41,6 @@ class GatewayIntegrationTest {
     private static final String LOGIN_COOKIE = "refresh_token=abc; Path=/api/v1/auth; HttpOnly; SameSite=Lax";
     private static final String CORE_OK_BODY = "{\"ok\":true}";
 
-    /** Last request the fake core received; null when the core was not hit since the last reset. */
     private static final AtomicReference<RecordedRequest> LAST = new AtomicReference<>();
     private static final AtomicBoolean CORE_RUNNING = new AtomicBoolean();
     private static final HttpServer CORE = startCore();
@@ -73,8 +68,6 @@ class GatewayIntegrationTest {
             CORE.stop(0);
         }
     }
-
-    // ---------------------------------------------------------------- tests
 
     @Test
     @Order(1)
@@ -199,7 +192,6 @@ class GatewayIntegrationTest {
     @Test
     @Order(10)
     void coreUnavailableReturns502UpstreamUnavailable() throws Exception {
-        // Last test by design: the fake core is stopped and cannot be restarted on the same port.
         CORE.stop(0);
         CORE_RUNNING.set(false);
         String authorization = "Bearer " + TestJwt.userToken(UUID.randomUUID());
@@ -209,8 +201,6 @@ class GatewayIntegrationTest {
         assertThat(response.statusCode()).isEqualTo(502);
         assertThat(response.body()).contains("UPSTREAM_UNAVAILABLE");
     }
-
-    // -------------------------------------------------------------- helpers
 
     private HttpResponse<String> get(String path, Map<String, String> headers) throws IOException, InterruptedException {
         return send("GET", path, HttpRequest.BodyPublishers.noBody(), headers);
@@ -278,7 +268,6 @@ class GatewayIntegrationTest {
         }
     }
 
-    /** A request as seen by the fake core. Header names are stored lowercased. */
     record RecordedRequest(String method, String path, Map<String, String> headers, String body) {
 
         String header(String name) {
