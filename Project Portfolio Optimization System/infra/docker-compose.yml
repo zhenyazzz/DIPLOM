@@ -16,5 +16,48 @@ services:
       timeout: 5s
       retries: 10
 
+  minio:
+    # MinIO no longer publishes community images; Chainguard builds them from source.
+    # The free tier only has floating tags, so pin by digest (-dev variant ships wget for the healthcheck).
+    # MinIO RELEASE.2026-11-12T01-15-23Z
+    image: cgr.dev/chainguard/minio:latest-dev@sha256:5735e8125c4af7dd310dc5780508bfb850f0b68783a1a56089b5c64316a8f603
+    container_name: portfolio-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: portfolio
+      MINIO_ROOT_PASSWORD: portfolio-secret
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - portfolio_minio_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:9000/minio/health/ready"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  fts:
+    profiles: [apps]
+    build: ../services/fts
+    container_name: portfolio-fts
+    ports:
+      - "8083:8083"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/portfolio_core
+      SPRING_DATASOURCE_USERNAME: portfolio
+      SPRING_DATASOURCE_PASSWORD: portfolio
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_PUBLIC_ENDPOINT: http://localhost:9000
+      MINIO_ACCESS_KEY: portfolio
+      MINIO_SECRET_KEY: portfolio-secret
+      CORE_JWT_SECRET: ${CORE_JWT_SECRET:?set CORE_JWT_SECRET (>= 32 bytes)}
+
 volumes:
   portfolio_pg_data:
+  portfolio_minio_data:

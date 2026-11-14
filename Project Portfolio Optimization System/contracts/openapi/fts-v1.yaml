@@ -1,0 +1,278 @@
+openapi: 3.1.0
+info:
+  title: Portfolio FTS — Files API
+  version: 1.0.0
+  description: File transfer service. Immutable objects; a new version is a new id.
+servers:
+  - url: http://localhost:8083
+    description: Local FTS
+security:
+  - bearerAuth: []
+tags:
+  - name: Files
+paths:
+  /api/v1/files:
+    post:
+      tags: [Files]
+      operationId: upload
+      summary: Upload a file
+      parameters:
+        - $ref: '#/components/parameters/Bucket'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UploadForm'
+      responses:
+        '201':
+          description: Stored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '413':
+          $ref: '#/components/responses/FileTooLarge'
+        '415':
+          $ref: '#/components/responses/ContentTypeNotAllowed'
+        '503':
+          $ref: '#/components/responses/StorageUnavailable'
+
+  /api/v1/files/{fileId}:
+    parameters:
+      - $ref: '#/components/parameters/FileId'
+    get:
+      tags: [Files]
+      operationId: getMetadata
+      summary: File metadata
+      responses:
+        '200':
+          description: Metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/FileNotFound'
+    delete:
+      tags: [Files]
+      operationId: delete
+      summary: Soft-delete a file (uploader or ADMIN)
+      responses:
+        '204':
+          description: Deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/FileNotFound'
+
+  /api/v1/files/{fileId}/content:
+    parameters:
+      - $ref: '#/components/parameters/FileId'
+    get:
+      tags: [Files]
+      operationId: download
+      summary: Download file bytes
+      responses:
+        '200':
+          description: File body
+          headers:
+            Content-Disposition:
+              required: true
+              schema:
+                type: string
+                examples:
+                  - 'attachment; filename="report.pdf"'
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/FileNotFound'
+        '503':
+          $ref: '#/components/responses/StorageUnavailable'
+
+  /api/v1/files/{fileId}/download-url:
+    parameters:
+      - $ref: '#/components/parameters/FileId'
+    post:
+      tags: [Files]
+      operationId: createDownloadUrl
+      summary: Presigned download URL
+      responses:
+        '200':
+          description: Short-lived URL
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DownloadUrlResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/FileNotFound'
+        '503':
+          $ref: '#/components/responses/StorageUnavailable'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    FileId:
+      name: fileId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    Bucket:
+      name: bucket
+      in: query
+      required: true
+      schema:
+        $ref: '#/components/schemas/FileBucket'
+
+  responses:
+    BadRequest:
+      description: '`EMPTY_FILE` or `BAD_REQUEST`'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Unauthorized:
+      description: '`UNAUTHORIZED`'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Forbidden:
+      description: '`FORBIDDEN`'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    FileNotFound:
+      description: '`FILE_NOT_FOUND` (missing or soft-deleted)'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    FileTooLarge:
+      description: '`FILE_TOO_LARGE`'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    ContentTypeNotAllowed:
+      description: '`CONTENT_TYPE_NOT_ALLOWED`'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    StorageUnavailable:
+      description: '`STORAGE_UNAVAILABLE`'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+
+  schemas:
+    FileBucket:
+      type: string
+      enum: [IMPORTS, REPORTS, ATTACHMENTS]
+
+    UploadForm:
+      type: object
+      required: [file]
+      properties:
+        file:
+          type: string
+          format: binary
+
+    FileResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - bucket
+        - originalName
+        - contentType
+        - size
+        - sha256
+        - createdBy
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        bucket:
+          $ref: '#/components/schemas/FileBucket'
+        originalName:
+          type: string
+        contentType:
+          type: string
+        size:
+          type: integer
+          format: int64
+        sha256:
+          type: string
+        createdBy:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    DownloadUrlResponse:
+      type: object
+      additionalProperties: false
+      required: [url, expiresAt]
+      properties:
+        url:
+          type: string
+          format: uri
+        expiresAt:
+          type: string
+          format: date-time
+
+    Problem:
+      type: object
+      additionalProperties: true
+      required: [type, title, status, detail, instance, code]
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri
+        code:
+          type: string
+          enum:
+            - FILE_NOT_FOUND
+            - EMPTY_FILE
+            - CONTENT_TYPE_NOT_ALLOWED
+            - FILE_TOO_LARGE
+            - FORBIDDEN
+            - STORAGE_UNAVAILABLE
+            - BAD_REQUEST
+            - UNAUTHORIZED

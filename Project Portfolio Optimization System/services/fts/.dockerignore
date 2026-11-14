@@ -1,0 +1,4 @@
+*
+!fts-impl/
+!fts-impl/target/
+!fts-impl/target/fts.jar
