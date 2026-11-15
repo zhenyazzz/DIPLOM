@@ -1,0 +1,4 @@
+*
+!notify-impl/
+!notify-impl/target/
+!notify-impl/target/notify.jar

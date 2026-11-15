@@ -10,11 +10,11 @@ Reference harness: `src/test/java/com/portfolio/common/security/support/`.
 Reusable JWT **validation** kit for Portfolio servlet services:
 
 - Auto-config via `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports`
-- HS256 `JwtDecoder` (shared secret, same claim shape as core issuer: `sub`, `role`, `email`)
+- HS256 `JwtDecoder` (shared secret; claims: `sub`, `roles`[] and/or `role`, `email`)
 - Default `SecurityFilterChain`: `permit-all` entries + `anyRequest().authenticated()`, CSRF off, stateless
 - `@EnableMethodSecurity` for `@PreAuthorize` / `@Secured`
 - Problem Details 401 (`UNAUTHORIZED`) / 403 (`FORBIDDEN`) entry-point and access-denied handlers
-- `SecuritySupport.requireUserId()` / `requireRole()` (fail-fast)
+- `SecuritySupport.requireUserId()` / `requireRole()` / `requireRoles()` / `hasRole()` (fail-fast)
 - `AccessTokenVerifier` + `AccessTokenClaims` for non-HTTP verification
 - `JwtAuditorAware` (`AuditorAware<String>`) when missing
 
@@ -47,7 +47,7 @@ portfolio:
       enabled: true                # false → consumer owns SecurityFilterChain
 ```
 
-Role claim → authority `ROLE_{value}` for method security.
+Role claim(s) → authorities `ROLE_{code}` (supports `roles` array and single `role`).
 
 ## Consumer checklist
 

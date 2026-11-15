@@ -1,0 +1,4 @@
+*
+!identity-impl/
+!identity-impl/target/
+!identity-impl/target/identity.jar

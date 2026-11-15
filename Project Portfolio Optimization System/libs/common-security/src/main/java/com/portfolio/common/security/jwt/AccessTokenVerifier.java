@@ -1,5 +1,6 @@
 package com.portfolio.common.security.jwt;
 
+import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -28,9 +29,11 @@ public class AccessTokenVerifier {
             } catch (IllegalArgumentException ex) {
                 throw new IllegalArgumentException("JWT subject (sub) is not a valid UUID: " + subject, ex);
             }
+            List<String> roles = JwtRoleClaims.extract(jwt, roleClaim);
             return new AccessTokenClaims(
                     userId,
-                    jwt.getClaimAsString(roleClaim),
+                    JwtRoleClaims.primary(roles),
+                    roles,
                     jwt.getClaimAsString("email"),
                     jwt.getIssuedAt(),
                     jwt.getExpiresAt());

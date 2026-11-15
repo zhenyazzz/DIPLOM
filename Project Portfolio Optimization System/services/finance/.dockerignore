@@ -1,0 +1,4 @@
+*
+!finance-impl/
+!finance-impl/target/
+!finance-impl/target/finance.jar

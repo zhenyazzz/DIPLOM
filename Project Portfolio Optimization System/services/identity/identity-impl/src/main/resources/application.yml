@@ -1,0 +1,44 @@
+server:
+  port: ${IDENTITY_PORT:8080}
+
+spring:
+  application:
+    name: portfolio-identity
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/portfolio_core}
+    username: ${SPRING_DATASOURCE_USERNAME:portfolio}
+    password: ${SPRING_DATASOURCE_PASSWORD:portfolio}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: identity
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+    schemas: identity
+    default-schema: identity
+    create-schemas: true
+    locations: classpath:db/migration
+
+# Issuance (identity) and validation (common-security) share the same HS256 secret.
+app:
+  jwt:
+    secret: ${CORE_JWT_SECRET:}
+    access-token-ttl: 15m
+    refresh-token-ttl: 14d
+  cookie:
+    secure: ${CORE_COOKIE_SECURE:false}
+
+portfolio:
+  security:
+    jwt:
+      secret: ${app.jwt.secret}
+    permit-all:
+      - POST:/api/v1/auth/register
+      - POST:/api/v1/auth/login
+      - POST:/api/v1/auth/refresh
+      - POST:/api/v1/auth/logout

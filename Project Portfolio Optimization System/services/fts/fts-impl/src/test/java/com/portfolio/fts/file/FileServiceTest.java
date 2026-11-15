@@ -335,7 +335,7 @@ class FileServiceTest {
         FileEntity entity = activeFile(UUID.randomUUID(), ownerId);
         when(files.findByIdAndDeletedAtIsNull(entity.getId())).thenReturn(Optional.of(entity));
         when(security.requireUserId()).thenReturn(adminId);
-        when(security.requireRole()).thenReturn("ADMIN");
+        when(security.hasRole("ADMIN")).thenReturn(true);
 
         // when
         fileService.delete(entity.getId());
@@ -353,7 +353,7 @@ class FileServiceTest {
         FileEntity entity = activeFile(UUID.randomUUID(), ownerId);
         when(files.findByIdAndDeletedAtIsNull(entity.getId())).thenReturn(Optional.of(entity));
         when(security.requireUserId()).thenReturn(otherId);
-        when(security.requireRole()).thenReturn("USER");
+        when(security.hasRole("ADMIN")).thenReturn(false);
 
         // when / then
         assertFtsError(() -> fileService.delete(entity.getId()), "FORBIDDEN", HttpStatus.FORBIDDEN);

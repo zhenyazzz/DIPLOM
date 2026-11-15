@@ -167,16 +167,15 @@ browser → frontend (React + TypeScript)
 
 ```text
 Project Portfolio Optimization System/
-  services/core/          ← живой backend (Maven: portfolio-core-api + portfolio-core-impl)
-  services/calc/          ← каркас Spec Kit, бизнес-кода почти нет
-  services/finance/       ← каркас, бизнес-кода почти нет
+  services/identity|domain|finance|calc|fts|notify|gateway
   libs/common-security/   ← JWT validate-only Boot starter
   libs/common-web/        ← generic CRUD/RSQL kit
   frontend/               ← заготовка
-  infra/docker-compose.yml ← PostgreSQL 17
-  docs/planning/          ← исследование и решения
-  contracts/              ← место под OpenAPI между сервисами
+  infra/docker-compose.yml ← PostgreSQL 17 + MinIO + apps profile
+  docs/planning/          ← исследование (историческое; канон — 01_ARCHITECTURE_…)
+  contracts/openapi/      ← OpenAPI между сервисами
 ```
+> **Устарело ниже по auth-пути:** реализация auth — `services/identity`, не core.
 
 ### Core — feature `001-user-auth` (сделано)
 
@@ -262,6 +261,6 @@ Project Portfolio Optimization System/
 - `docs/planning/mathematical-options.md`
 - `docs/planning/assignment-requirements.md`
 - `libs/*/AGENTS.md`
-- `services/core/.specify/memory/constitution.md`
+- `01_ARCHITECTURE_Portfolio_Optimizer.md` (канон вместо устаревшего core constitution)
 
 **Не** начинай массовую реализацию кода, пока студент не утвердит архитектуру.

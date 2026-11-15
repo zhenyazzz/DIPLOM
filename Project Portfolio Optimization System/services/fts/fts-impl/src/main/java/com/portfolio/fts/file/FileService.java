@@ -160,7 +160,7 @@ public class FileService {
         if (file.isOwnedBy(security.requireUserId())) {
             return;
         }
-        if (ADMIN_ROLE.equals(security.requireRole())) {
+        if (security.hasRole(ADMIN_ROLE)) {
             return;
         }
         throw FtsException.forbidden();

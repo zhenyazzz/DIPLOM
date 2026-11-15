@@ -1,0 +1,40 @@
+server:
+  port: ${NOTIFY_PORT:8087}
+
+spring:
+  application:
+    name: portfolio-notify
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/portfolio_core}
+    username: ${SPRING_DATASOURCE_USERNAME:portfolio}
+    password: ${SPRING_DATASOURCE_PASSWORD:portfolio}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: notify
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+    schemas: notify
+    default-schema: notify
+    create-schemas: true
+    locations: classpath:db/migration
+  mail:
+    host: ${NOTIFY_MAIL_HOST:localhost}
+    port: ${NOTIFY_MAIL_PORT:25}
+
+portfolio:
+  security:
+    jwt:
+      secret: ${CORE_JWT_SECRET:}
+    permit-all:
+      - GET:/actuator/health
+
+notify:
+  email:
+    mode: ${NOTIFY_EMAIL_MODE:stub}
+  internal-api-key: ${INTERNAL_API_KEY:}

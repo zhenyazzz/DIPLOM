@@ -1,0 +1,4 @@
+*
+!domain-impl/
+!domain-impl/target/
+!domain-impl/target/domain.jar

@@ -1,0 +1,37 @@
+server:
+  port: ${FINANCE_PORT:8082}
+
+spring:
+  application:
+    name: portfolio-finance
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/portfolio_core}
+    username: ${SPRING_DATASOURCE_USERNAME:portfolio}
+    password: ${SPRING_DATASOURCE_PASSWORD:portfolio}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: finance
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+    schemas: finance
+    default-schema: finance
+    create-schemas: true
+    locations: classpath:db/migration
+
+portfolio:
+  security:
+    jwt:
+      secret: ${CORE_JWT_SECRET:}
+    permit-all:
+      - GET:/actuator/health
+
+finance:
+  clients:
+    fts-url: ${FTS_URL:http://localhost:8083}
+    notify-url: ${NOTIFY_URL:http://localhost:8087}

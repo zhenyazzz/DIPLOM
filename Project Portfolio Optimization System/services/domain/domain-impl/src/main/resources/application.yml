@@ -1,0 +1,39 @@
+server:
+  port: ${DOMAIN_PORT:8084}
+
+spring:
+  application:
+    name: portfolio-domain
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/portfolio_core}
+    username: ${SPRING_DATASOURCE_USERNAME:portfolio}
+    password: ${SPRING_DATASOURCE_PASSWORD:portfolio}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: domain
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+    schemas: domain
+    default-schema: domain
+    create-schemas: true
+    locations: classpath:db/migration
+
+portfolio:
+  security:
+    jwt:
+      secret: ${CORE_JWT_SECRET:}
+    permit-all:
+      - GET:/actuator/health
+
+domain:
+  clients:
+    calc-url: ${CALC_URL:http://localhost:8081}
+    finance-url: ${FINANCE_URL:http://localhost:8082}
+    fts-url: ${FTS_URL:http://localhost:8083}
+    notify-url: ${NOTIFY_URL:http://localhost:8087}

@@ -1,5 +1,9 @@
 package com.portfolio.common.security.context;
 
+import com.portfolio.common.security.jwt.JwtRoleClaims;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -26,22 +30,43 @@ public class SecuritySupport {
         }
     }
 
+    /**
+     * Primary role for callers that expect a single code (ADMIN preferred if present).
+     */
     public String requireRole() {
+        List<String> roles = requireRoles();
+        String primary = JwtRoleClaims.primary(roles);
+        if (primary == null) {
+            throw new UnauthenticatedException("JWT role claim '" + roleClaim + "' is missing");
+        }
+        return primary;
+    }
+
+    public List<String> requireRoles() {
         Jwt jwt = requireJwt();
-        String role = jwt.getClaimAsString(roleClaim);
-        if (role == null || role.isBlank()) {
+        Set<String> codes = new LinkedHashSet<>(JwtRoleClaims.extract(jwt, roleClaim));
+        if (codes.isEmpty()) {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             if (authentication != null) {
                 for (GrantedAuthority authority : authentication.getAuthorities()) {
                     String name = authority.getAuthority();
                     if (name != null && name.startsWith("ROLE_") && name.length() > 5) {
-                        return name.substring(5);
+                        codes.add(name.substring(5));
                     }
                 }
             }
+        }
+        if (codes.isEmpty()) {
             throw new UnauthenticatedException("JWT role claim '" + roleClaim + "' is missing");
         }
-        return role;
+        return List.copyOf(codes);
+    }
+
+    public boolean hasRole(String role) {
+        if (role == null || role.isBlank()) {
+            return false;
+        }
+        return requireRoles().contains(role);
     }
 
     private Jwt requireJwt() {

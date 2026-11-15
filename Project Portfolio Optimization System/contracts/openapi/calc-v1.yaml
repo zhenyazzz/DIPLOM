@@ -1,0 +1,22 @@
+openapi: 3.0.3
+info:
+  title: Calc API
+  version: 0.1.0
+  description: Stateless SAW and binary optimization (internal).
+servers:
+  - url: /
+paths:
+  /v1/scoring/saw:
+    post:
+      operationId: saw
+      summary: Multi-criteria SAW scoring
+      responses:
+        '200':
+          description: Scores
+  /v1/optimization/binary:
+    post:
+      operationId: binaryOptimize
+      summary: 0-1 portfolio selection
+      responses:
+        '200':
+          description: Selection

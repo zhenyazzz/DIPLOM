@@ -1,0 +1,4 @@
+*
+!calc-impl/
+!calc-impl/target/
+!calc-impl/target/calc.jar

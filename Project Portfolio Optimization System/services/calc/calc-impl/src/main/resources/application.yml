@@ -1,0 +1,13 @@
+server:
+  port: ${CALC_PORT:8081}
+
+spring:
+  application:
+    name: portfolio-calc
+
+portfolio:
+  security:
+    jwt:
+      secret: ${CORE_JWT_SECRET:}
+    permit-all:
+      - GET:/actuator/health

@@ -1,0 +1,107 @@
+openapi: 3.0.3
+info:
+  title: Domain API
+  version: 0.1.0
+  description: >
+    Reference, projects, scoring data, scenarios, runs, reports, audit.
+    Replaces transitional project-v1 / scoring-v1 / portfolio-v1.
+servers:
+  - url: /
+paths:
+  /api/v1/reference/departments:
+    get:
+      operationId: listDepartments
+      summary: List departments
+      responses:
+        '200':
+          description: OK
+  /api/v1/projects:
+    get:
+      operationId: listProjects
+      summary: List projects
+      responses:
+        '200':
+          description: OK
+    post:
+      operationId: createProject
+      summary: Create project
+      responses:
+        '201':
+          description: Created
+  /api/v1/criteria:
+    get:
+      operationId: listCriteria
+      summary: List criteria
+      responses:
+        '200':
+          description: OK
+  /api/v1/scoring-models:
+    get:
+      operationId: listScoringModels
+      summary: List scoring models
+      responses:
+        '200':
+          description: OK
+  /api/v1/assessments:
+    get:
+      operationId: listAssessments
+      summary: List assessments
+      responses:
+        '200':
+          description: OK
+  /api/v1/scores:
+    get:
+      operationId: listScores
+      summary: List project scores
+      responses:
+        '200':
+          description: OK
+  /api/v1/scenarios:
+    get:
+      operationId: listScenarios
+      summary: List scenarios
+      responses:
+        '200':
+          description: OK
+  /api/v1/scenarios/{id}/runs:
+    post:
+      operationId: startRun
+      summary: Start optimization job
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '202':
+          description: Accepted job
+  /api/v1/runs/{id}:
+    get:
+      operationId: getRun
+      summary: Run status and result
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+  /api/v1/reports:
+    get:
+      operationId: listReports
+      summary: List reports
+      responses:
+        '200':
+          description: OK
+  /api/v1/audit:
+    get:
+      operationId: listAudit
+      summary: List audit entries
+      responses:
+        '200':
+          description: OK

@@ -19,7 +19,7 @@ class UpstreamErrorResolverTest {
             new UpstreamErrorResolver(new ProblemResponses(JsonMapper.builder().build()));
 
     @Test
-    void resourceAccessExceptionWrappingConnectExceptionIsBadGatewayUnavailable() {
+    void resourceAccessExceptionWrappingConnectExceptionIsBadGatewayUnavailable() throws Exception {
         var ex = new ResourceAccessException("I/O error", new ConnectException("Connection refused"));
         var response = new MockHttpServletResponse();
 
@@ -33,7 +33,7 @@ class UpstreamErrorResolverTest {
     }
 
     @Test
-    void resourceAccessExceptionWrappingSocketTimeoutIsGatewayTimeout() {
+    void resourceAccessExceptionWrappingSocketTimeoutIsGatewayTimeout() throws Exception {
         var ex = new ResourceAccessException("I/O error", new SocketTimeoutException("Read timed out"));
         var response = new MockHttpServletResponse();
 
@@ -45,7 +45,7 @@ class UpstreamErrorResolverTest {
     }
 
     @Test
-    void httpConnectTimeoutIsBadGatewayUnavailableNotTimeout() {
+    void httpConnectTimeoutIsBadGatewayUnavailableNotTimeout() throws Exception {
         var ex = new HttpConnectTimeoutException("connect timed out");
         var response = new MockHttpServletResponse();
 
@@ -57,7 +57,7 @@ class UpstreamErrorResolverTest {
     }
 
     @Test
-    void unrelatedExceptionIsNotHandled() {
+    void unrelatedExceptionIsNotHandled() throws Exception {
         var response = new MockHttpServletResponse();
 
         ModelAndView mav = resolver.resolveException(

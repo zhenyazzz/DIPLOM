@@ -1,0 +1,36 @@
+openapi: 3.0.3
+info:
+  title: Notify API
+  version: 0.1.0
+  description: In-app notifications, internal events, WebSocket push (scaffold).
+servers:
+  - url: /
+paths:
+  /api/v1/notifications:
+    get:
+      operationId: listNotifications
+      summary: List current user notifications
+      responses:
+        '200':
+          description: OK
+  /api/v1/notifications/{id}/read:
+    post:
+      operationId: markNotificationRead
+      summary: Mark notification as read
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: No Content
+  /internal/v1/events:
+    post:
+      operationId: ingestEvent
+      summary: Ingest notification event from domain/finance (afterCommit)
+      responses:
+        '202':
+          description: Accepted

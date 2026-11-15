@@ -1,0 +1,43 @@
+openapi: 3.0.3
+info:
+  title: Finance API
+  version: 0.1.0
+  description: >
+    Owns import sessions, snapshots and cash flows; parses files via FTS and computes NPV.
+servers:
+  - url: /
+paths:
+  /api/v1/finance/imports:
+    get:
+      operationId: listImports
+      summary: List import sessions
+      responses:
+        '200':
+          description: OK
+    post:
+      operationId: createImport
+      summary: Upload import (stores file via FTS)
+      responses:
+        '201':
+          description: Created
+  /api/v1/finance/imports/{id}/publish:
+    post:
+      operationId: publishImport
+      summary: Publish immutable financial snapshot
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Snapshot published
+  /api/v1/finance/snapshots:
+    get:
+      operationId: listSnapshots
+      summary: List financial snapshots
+      responses:
+        '200':
+          description: OK

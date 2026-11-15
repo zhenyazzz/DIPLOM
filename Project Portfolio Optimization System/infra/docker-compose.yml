@@ -37,6 +37,84 @@ services:
       timeout: 5s
       retries: 10
 
+  identity:
+    profiles: [apps]
+    build: ../services/identity
+    container_name: portfolio-identity
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/portfolio_core
+      SPRING_DATASOURCE_USERNAME: portfolio
+      SPRING_DATASOURCE_PASSWORD: portfolio
+      CORE_JWT_SECRET: ${CORE_JWT_SECRET:?set CORE_JWT_SECRET (>= 32 bytes)}
+
+  domain:
+    profiles: [apps]
+    build: ../services/domain
+    container_name: portfolio-domain
+    ports:
+      - "8084:8084"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/portfolio_core
+      SPRING_DATASOURCE_USERNAME: portfolio
+      SPRING_DATASOURCE_PASSWORD: portfolio
+      CORE_JWT_SECRET: ${CORE_JWT_SECRET:?set CORE_JWT_SECRET (>= 32 bytes)}
+      CALC_URL: http://calc:8081
+      FINANCE_URL: http://finance:8082
+      FTS_URL: http://fts:8083
+      NOTIFY_URL: http://notify:8087
+
+  calc:
+    profiles: [apps]
+    build: ../services/calc
+    container_name: portfolio-calc
+    ports:
+      - "8081:8081"
+    environment:
+      CORE_JWT_SECRET: ${CORE_JWT_SECRET:?set CORE_JWT_SECRET (>= 32 bytes)}
+
+  finance:
+    profiles: [apps]
+    build: ../services/finance
+    container_name: portfolio-finance
+    ports:
+      - "8082:8082"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      fts:
+        condition: service_started
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/portfolio_core
+      SPRING_DATASOURCE_USERNAME: portfolio
+      SPRING_DATASOURCE_PASSWORD: portfolio
+      CORE_JWT_SECRET: ${CORE_JWT_SECRET:?set CORE_JWT_SECRET (>= 32 bytes)}
+      FTS_URL: http://fts:8083
+      NOTIFY_URL: http://notify:8087
+
+  notify:
+    profiles: [apps]
+    build: ../services/notify
+    container_name: portfolio-notify
+    ports:
+      - "8087:8087"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/portfolio_core
+      SPRING_DATASOURCE_USERNAME: portfolio
+      SPRING_DATASOURCE_PASSWORD: portfolio
+      CORE_JWT_SECRET: ${CORE_JWT_SECRET:?set CORE_JWT_SECRET (>= 32 bytes)}
+      NOTIFY_EMAIL_MODE: stub
+
   fts:
     profiles: [apps]
     build: ../services/fts
@@ -57,6 +135,26 @@ services:
       MINIO_ACCESS_KEY: portfolio
       MINIO_SECRET_KEY: portfolio-secret
       CORE_JWT_SECRET: ${CORE_JWT_SECRET:?set CORE_JWT_SECRET (>= 32 bytes)}
+
+  gateway:
+    profiles: [apps]
+    build: ../services/gateway
+    container_name: portfolio-gateway
+    ports:
+      - "8090:8090"
+    depends_on:
+      identity:
+        condition: service_started
+      domain:
+        condition: service_started
+      notify:
+        condition: service_started
+    environment:
+      CORE_JWT_SECRET: ${CORE_JWT_SECRET:?set CORE_JWT_SECRET (>= 32 bytes)}
+      IDENTITY_URL: http://identity:8080
+      DOMAIN_URL: http://domain:8084
+      FINANCE_URL: http://finance:8082
+      NOTIFY_URL: http://notify:8087
 
 volumes:
   portfolio_pg_data:

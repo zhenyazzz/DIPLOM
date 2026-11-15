@@ -37,6 +37,7 @@ class AccessTokenVerifierTest {
 
         assertThat(claims.subject()).isEqualTo(subject);
         assertThat(claims.role()).isEqualTo("USER");
+        assertThat(claims.roles()).containsExactly("USER");
         assertThat(claims.email()).isEqualTo("user@example.com");
         assertThat(claims.expiresAt()).isNotNull();
     }

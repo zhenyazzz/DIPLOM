@@ -51,10 +51,12 @@ class GatewayIntegrationTest {
     int port;
 
     @DynamicPropertySource
-    static void coreRoutes(DynamicPropertyRegistry registry) {
-        String coreUrl = "http://localhost:" + CORE.getAddress().getPort();
-        registry.add("spring.cloud.gateway.server.webmvc.routes[0].uri", () -> coreUrl);
-        registry.add("spring.cloud.gateway.server.webmvc.routes[1].uri", () -> coreUrl);
+    static void upstreamRoutes(DynamicPropertyRegistry registry) {
+        String upstream = "http://localhost:" + CORE.getAddress().getPort();
+        registry.add("IDENTITY_URL", () -> upstream);
+        registry.add("DOMAIN_URL", () -> upstream);
+        registry.add("FINANCE_URL", () -> upstream);
+        registry.add("NOTIFY_URL", () -> upstream);
     }
 
     @BeforeEach

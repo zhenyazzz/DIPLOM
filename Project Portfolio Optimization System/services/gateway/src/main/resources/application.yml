@@ -7,21 +7,69 @@ spring:
     name: portfolio-gateway
   http:
     clients:
-      connect-timeout: ${GATEWAY_CORE_CONNECT_TIMEOUT:2s}
-      read-timeout: ${GATEWAY_CORE_READ_TIMEOUT:30s}
+      connect-timeout: ${GATEWAY_CONNECT_TIMEOUT:2s}
+      read-timeout: ${GATEWAY_READ_TIMEOUT:30s}
   cloud:
     gateway:
       server:
         webmvc:
           routes:
-            - id: core-auth
-              uri: ${CORE_URL:http://localhost:8080}
+            - id: identity-auth
+              uri: ${IDENTITY_URL:http://localhost:8080}
               predicates:
                 - Path=/api/v1/auth/**
-            - id: core
-              uri: ${CORE_URL:http://localhost:8080}
+            - id: identity-users
+              uri: ${IDENTITY_URL:http://localhost:8080}
               predicates:
-                - Path=/api/**
+                - Path=/api/v1/users/**
+            - id: domain-reference
+              uri: ${DOMAIN_URL:http://localhost:8084}
+              predicates:
+                - Path=/api/v1/reference/**
+            - id: domain-projects
+              uri: ${DOMAIN_URL:http://localhost:8084}
+              predicates:
+                - Path=/api/v1/projects/**
+            - id: domain-criteria
+              uri: ${DOMAIN_URL:http://localhost:8084}
+              predicates:
+                - Path=/api/v1/criteria/**
+            - id: domain-scoring-models
+              uri: ${DOMAIN_URL:http://localhost:8084}
+              predicates:
+                - Path=/api/v1/scoring-models/**
+            - id: domain-assessments
+              uri: ${DOMAIN_URL:http://localhost:8084}
+              predicates:
+                - Path=/api/v1/assessments/**
+            - id: domain-scores
+              uri: ${DOMAIN_URL:http://localhost:8084}
+              predicates:
+                - Path=/api/v1/scores/**
+            - id: finance
+              uri: ${FINANCE_URL:http://localhost:8082}
+              predicates:
+                - Path=/api/v1/finance/**
+            - id: domain-scenarios
+              uri: ${DOMAIN_URL:http://localhost:8084}
+              predicates:
+                - Path=/api/v1/scenarios/**
+            - id: domain-runs
+              uri: ${DOMAIN_URL:http://localhost:8084}
+              predicates:
+                - Path=/api/v1/runs/**
+            - id: domain-reports
+              uri: ${DOMAIN_URL:http://localhost:8084}
+              predicates:
+                - Path=/api/v1/reports/**
+            - id: domain-audit
+              uri: ${DOMAIN_URL:http://localhost:8084}
+              predicates:
+                - Path=/api/v1/audit/**
+            - id: notify-notifications
+              uri: ${NOTIFY_URL:http://localhost:8087}
+              predicates:
+                - Path=/api/v1/notifications/**
 
 management:
   endpoints:

@@ -4,10 +4,10 @@ import com.portfolio.common.security.audit.JwtAuditorAware;
 import com.portfolio.common.security.autoconfigure.PortfolioSecurityProperties.PermitAllEntry;
 import com.portfolio.common.security.context.SecuritySupport;
 import com.portfolio.common.security.jwt.AccessTokenVerifier;
+import com.portfolio.common.security.jwt.JwtRoleClaims;
 import com.portfolio.common.security.web.ProblemDetailsAccessDeniedHandler;
 import com.portfolio.common.security.web.ProblemDetailsAuthEntryPoint;
 import java.nio.charset.StandardCharsets;
-import java.util.Collection;
 import java.util.List;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
@@ -61,13 +61,13 @@ public class PortfolioSecurityAutoConfiguration {
         String roleClaim = properties.getJwt().getRoleClaim();
         JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
         converter.setJwtGrantedAuthoritiesConverter(jwt -> {
-            String role = jwt.getClaimAsString(roleClaim);
-            if (role == null || role.isBlank()) {
+            List<String> roles = JwtRoleClaims.extract(jwt, roleClaim);
+            if (roles.isEmpty()) {
                 return List.of();
             }
-            Collection<GrantedAuthority> authorities =
-                    List.of(new SimpleGrantedAuthority("ROLE_" + role));
-            return authorities;
+            return roles.stream()
+                    .map(role -> (GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + role))
+                    .toList();
         });
         return converter;
     }
