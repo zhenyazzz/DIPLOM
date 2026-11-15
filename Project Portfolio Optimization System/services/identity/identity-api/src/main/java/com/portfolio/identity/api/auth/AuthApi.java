@@ -1,6 +1,9 @@
 package com.portfolio.identity.api.auth;
 
-import com.portfolio.identity.api.identity.UserResponse;
+import com.portfolio.identity.api.auth.dto.LoginRequest;
+import com.portfolio.identity.api.auth.dto.RegisterRequest;
+import com.portfolio.identity.api.auth.dto.TokenResponse;
+import com.portfolio.identity.api.identity.dto.UserResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;

@@ -1,0 +1,170 @@
+# Minimal stack for auth + admin users UI:
+#   postgres + identity + gateway
+# Frontend (Vite) proxies /api → http://localhost:8090
+#
+# Before build, package jars:
+#   mvn -f "Project Portfolio Optimization System/libs/common-security/pom.xml" install -DskipTests
+#   mvn -f "Project Portfolio Optimization System/libs/common-web/pom.xml" install -DskipTests
+#   mvn -f "Project Portfolio Optimization System/services/identity/pom.xml" package -DskipTests
+#   mvn -f "Project Portfolio Optimization System/services/gateway/pom.xml" package -DskipTests
+#
+# Run:
+#   set CORE_JWT_SECRET=change-me-change-me-change-me-32b
+#   docker compose up --build
+#
+# Seed admin: admin@portfolio.local / Admin123!
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: portfolio-postgres
+    environment:
+      POSTGRES_DB: portfolio_core
+      POSTGRES_USER: portfolio
+      POSTGRES_PASSWORD: portfolio
+    ports:
+      - "5432:5432"
+    volumes:
+      - portfolio_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U portfolio -d portfolio_core"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  identity:
+    build:
+      context: "./Project Portfolio Optimization System/services/identity"
+    container_name: portfolio-identity
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/portfolio_core
+      SPRING_DATASOURCE_USERNAME: portfolio
+      SPRING_DATASOURCE_PASSWORD: portfolio
+      CORE_JWT_SECRET: ${CORE_JWT_SECRET:?set CORE_JWT_SECRET (>= 32 bytes)}
+      CORE_COOKIE_SECURE: "false"
+
+  gateway:
+    build:
+      context: "./Project Portfolio Optimization System/services/gateway"
+    container_name: portfolio-gateway
+    ports:
+      - "8090:8090"
+    depends_on:
+      identity:
+        condition: service_started
+    environment:
+      CORE_JWT_SECRET: ${CORE_JWT_SECRET:?set CORE_JWT_SECRET (>= 32 bytes)}
+      IDENTITY_URL: http://identity:8080
+      GATEWAY_CORS_ALLOWED_ORIGINS: http://localhost:5173
+
+  # --- other services paused for auth wiring ---
+  # minio:
+  #   image: cgr.dev/chainguard/minio:latest-dev@sha256:5735e8125c4af7dd310dc5780508bfb850f0b68783a1a56089b5c64316a8f603
+  #   container_name: portfolio-minio
+  #   command: server /data --console-address ":9001"
+  #   environment:
+  #     MINIO_ROOT_USER: portfolio
+  #     MINIO_ROOT_PASSWORD: portfolio-secret
+  #   ports:
+  #     - "9000:9000"
+  #     - "9001:9001"
+  #   volumes:
+  #     - portfolio_minio_data:/data
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:9000/minio/health/ready"]
+  #     interval: 5s
+  #     timeout: 5s
+  #     retries: 10
+
+  # domain:
+  #   build:
+  #     context: "./Project Portfolio Optimization System/services/domain"
+  #   container_name: portfolio-domain
+  #   ports:
+  #     - "8084:8084"
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   environment:
+  #     SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/portfolio_core
+  #     SPRING_DATASOURCE_USERNAME: portfolio
+  #     SPRING_DATASOURCE_PASSWORD: portfolio
+  #     CORE_JWT_SECRET: ${CORE_JWT_SECRET:?set CORE_JWT_SECRET (>= 32 bytes)}
+  #     CALC_URL: http://calc:8081
+  #     FINANCE_URL: http://finance:8082
+  #     FTS_URL: http://fts:8083
+  #     NOTIFY_URL: http://notify:8087
+
+  # calc:
+  #   build:
+  #     context: "./Project Portfolio Optimization System/services/calc"
+  #   container_name: portfolio-calc
+  #   ports:
+  #     - "8081:8081"
+  #   environment:
+  #     CORE_JWT_SECRET: ${CORE_JWT_SECRET:?set CORE_JWT_SECRET (>= 32 bytes)}
+
+  # finance:
+  #   build:
+  #     context: "./Project Portfolio Optimization System/services/finance"
+  #   container_name: portfolio-finance
+  #   ports:
+  #     - "8082:8082"
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     fts:
+  #       condition: service_started
+  #   environment:
+  #     SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/portfolio_core
+  #     SPRING_DATASOURCE_USERNAME: portfolio
+  #     SPRING_DATASOURCE_PASSWORD: portfolio
+  #     CORE_JWT_SECRET: ${CORE_JWT_SECRET:?set CORE_JWT_SECRET (>= 32 bytes)}
+  #     FTS_URL: http://fts:8083
+  #     NOTIFY_URL: http://notify:8087
+
+  # notify:
+  #   build:
+  #     context: "./Project Portfolio Optimization System/services/notify"
+  #   container_name: portfolio-notify
+  #   ports:
+  #     - "8087:8087"
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   environment:
+  #     SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/portfolio_core
+  #     SPRING_DATASOURCE_USERNAME: portfolio
+  #     SPRING_DATASOURCE_PASSWORD: portfolio
+  #     CORE_JWT_SECRET: ${CORE_JWT_SECRET:?set CORE_JWT_SECRET (>= 32 bytes)}
+  #     NOTIFY_EMAIL_MODE: stub
+
+  # fts:
+  #   build:
+  #     context: "./Project Portfolio Optimization System/services/fts"
+  #   container_name: portfolio-fts
+  #   ports:
+  #     - "8083:8083"
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     minio:
+  #       condition: service_healthy
+  #   environment:
+  #     SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/portfolio_core
+  #     SPRING_DATASOURCE_USERNAME: portfolio
+  #     SPRING_DATASOURCE_PASSWORD: portfolio
+  #     MINIO_ENDPOINT: http://minio:9000
+  #     MINIO_PUBLIC_ENDPOINT: http://localhost:9000
+  #     MINIO_ACCESS_KEY: portfolio
+  #     MINIO_SECRET_KEY: portfolio-secret
+  #     CORE_JWT_SECRET: ${CORE_JWT_SECRET:?set CORE_JWT_SECRET (>= 32 bytes)}
+
+volumes:
+  portfolio_pg_data:
+  # portfolio_minio_data:
