@@ -22,6 +22,10 @@ spring:
               uri: ${IDENTITY_URL:http://localhost:8080}
               predicates:
                 - Path=/api/v1/users/**
+            - id: identity-admin
+              uri: ${IDENTITY_URL:http://localhost:8080}
+              predicates:
+                - Path=/api/v1/admin/**
             - id: domain-reference
               uri: ${DOMAIN_URL:http://localhost:8084}
               predicates:
@@ -58,6 +62,10 @@ spring:
               uri: ${DOMAIN_URL:http://localhost:8084}
               predicates:
                 - Path=/api/v1/runs/**
+            - id: domain-approvals
+              uri: ${DOMAIN_URL:http://localhost:8084}
+              predicates:
+                - Path=/api/v1/approvals/**
             - id: domain-reports
               uri: ${DOMAIN_URL:http://localhost:8084}
               predicates:

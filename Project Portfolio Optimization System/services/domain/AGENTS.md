@@ -9,7 +9,7 @@ Port **8084**. Schema `domain`.
 | `reference/` | departments, budget_periods, strategic_goals |
 | `project/` | projects, links, goals, attachments → FTS |
 | `scoring/` | criteria, models, assessments, scores → calc SAW |
-| `portfolio/` | scenarios, runs (async job), approvals, reports → calc binary, finance, FTS |
+| `portfolio/` | scenarios, runs (async job), approvals (`GET /api/v1/approvals`, `POST /api/v1/scenarios/{id}/approvals`), reports → calc binary, finance, FTS |
 | `audit/` | audit_log |
 | `shared/` | клиенты, Money/ошибки |
 

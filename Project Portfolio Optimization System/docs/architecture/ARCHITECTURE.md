@@ -23,10 +23,10 @@
 
 ```text
 browser → nginx → gateway
-            ├─ auth/users     → identity
-            ├─ projects, criteria, scenarios, runs, audit → domain → calc, finance, fts, notify
-            ├─ finance/**     → finance → fts
-            └─ notifications  → notify
+            ├─ auth/users/admin → identity
+            ├─ projects, criteria, scenarios, runs, approvals, audit → domain → calc, finance, fts, notify
+            ├─ finance/**       → finance → fts
+            └─ notifications    → notify
 browser → nginx /ws/** → notify
 calc (stateless) · fts (MinIO) · PG schemas: identity, domain, finance, notify, fts
 ```

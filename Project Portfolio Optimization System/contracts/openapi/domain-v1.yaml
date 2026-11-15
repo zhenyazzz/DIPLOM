@@ -3,7 +3,7 @@ info:
   title: Domain API
   version: 0.1.0
   description: >
-    Reference, projects, scoring data, scenarios, runs, reports, audit.
+    Reference, projects, scoring data, scenarios, runs, approvals, reports, audit.
     Replaces transitional project-v1 / scoring-v1 / portfolio-v1.
 servers:
   - url: /
@@ -91,6 +91,29 @@ paths:
       responses:
         '200':
           description: OK
+  /api/v1/approvals:
+    get:
+      operationId: listApprovals
+      summary: List approvals (ЛПР inbox / filters)
+      responses:
+        '200':
+          description: OK
+  /api/v1/scenarios/{id}/approvals:
+    post:
+      operationId: decideApproval
+      summary: Submit decision for a scenario run
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Decision recorded
+        '201':
+          description: Approval created
   /api/v1/reports:
     get:
       operationId: listReports

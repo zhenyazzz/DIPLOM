@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: Identity API
   version: 1.0.0
-  description: Auth and users (JWT issuance).
+  description: Auth and users (JWT issuance). Admin under /api/v1/admin/users.
 servers:
   - url: /
 paths:
@@ -41,10 +41,38 @@ paths:
       responses:
         '200':
           description: User
-  /api/v1/users:
+  /api/v1/admin/users:
     get:
       operationId: listUsers
       summary: Admin list users
       responses:
         '200':
           description: Users
+  /api/v1/admin/users/{userId}/role:
+    put:
+      operationId: changeRole
+      summary: Admin change user role
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Updated user
+  /api/v1/admin/users/{userId}/blocked:
+    put:
+      operationId: setBlocked
+      summary: Admin block or unblock user
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Updated user

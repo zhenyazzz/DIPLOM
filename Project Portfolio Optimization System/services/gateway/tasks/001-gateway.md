@@ -2,12 +2,12 @@
 
 ## Цель
 
-Единая точка входа за nginx: маршрутизация `/api/**` → core, ранняя проверка JWT, CORS, rate-limit на login.
-Бизнес-логики и выдачи токенов нет.
+Единая точка входа за nginx: маршрутизация `/api/**` → identity / domain / finance / notify, ранняя проверка JWT, CORS, rate-limit на login.
+Бизнес-логики и выдачи токенов нет. Канон маршрутов: `01_ARCHITECTURE` §4 (в т.ч. `/api/v1/admin/**`, `/api/v1/approvals/**`).
 
 ## Не входит
 
-Маршрут к FTS (`/api/v1/files/**` — внутренний), маршруты к calc/finance (их вызывает только core), service discovery,
+Маршрут к FTS (`/api/v1/files/**` — внутренний), маршруты к calc (его вызывает только domain), service discovery,
 распределённый rate-limit (Redis), circuit breaker.
 
 ## Решения
@@ -15,8 +15,8 @@
 - **Spring Cloud Gateway Server WebMVC** (закрывает GW-STACK): servlet-стек, как у сервисов, поэтому `common-security`
   подключается как есть — та же проверка HS256 JWT и те же 401 `UNAUTHORIZED` Problem Details.
 - Java 25, Spring Boot 4.1.1, Spring Cloud 2025.1.x (≥ 2025.1.2 — первая с поддержкой Boot 4.1). Один модуль, порт 8090.
-- Пути проксируются **без переписывания** (нет StripPrefix): refresh-cookie core имеет `Path=/api/v1/auth`.
-- permit-all — те же 4 auth-эндпоинта, что в core, плюс `GET /actuator/health`.
+- Пути проксируются **без переписывания** (нет StripPrefix): refresh-cookie identity имеет `Path=/api/v1/auth`.
+- permit-all — те же 4 auth-эндпоинта, что в identity, плюс `GET /actuator/health`.
 - Servlet-фильтры раньше Spring Security (-100): `InternalPathsFilter` → `LoginRateLimitFilter`.
 - `X-Request-Id` не делаем (решение 2026-11-14).
 - Rate-limit — своя fixed-window реализация в памяти по IP (без Bucket4j); IP — `getRemoteAddr()` при
@@ -31,13 +31,13 @@
 | 401 | `UNAUTHORIZED` | нет/невалидный JWT (common-security) |
 | 404 | `NOT_FOUND` | внутренний путь (`/api/v1/files/**`) |
 | 429 | `TOO_MANY_REQUESTS` | превышен лимит login, есть `Retry-After` |
-| 502 | `UPSTREAM_UNAVAILABLE` | core недоступен |
-| 504 | `UPSTREAM_TIMEOUT` | core не ответил за read-timeout |
+| 502 | `UPSTREAM_UNAVAILABLE` | upstream (identity/domain/…) недоступен |
+| 504 | `UPSTREAM_TIMEOUT` | upstream не ответил за read-timeout |
 
 ## Готово, когда
 
-- `mvn verify` в `services/gateway` зелёный (unit + интеграционный тест с fake core).
-- `docker compose --profile apps up` поднимает gateway рядом с core.
+- `mvn verify` в `services/gateway` зелёный (unit + интеграционный тест с fake upstream).
+- `docker compose --profile apps up` поднимает gateway рядом с identity/domain/….
 - `ARCHITECTURE.md` и `AGENTS.md` отражают реализацию.
 
 ## Задачи
@@ -57,7 +57,7 @@
 
 ### Фаза 2 — интеграционный тест
 
-- [ ] T020 `GatewayIntegrationTest`: fake core на JDK `HttpServer`, полный HTTP-сценарий
+- [ ] T020 `GatewayIntegrationTest`: fake upstream на JDK `HttpServer`, полный HTTP-сценарий
 
 ### Фаза 3 — проверка (оркестратор)
 

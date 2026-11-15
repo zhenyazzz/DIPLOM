@@ -8,7 +8,7 @@ Package root `com.portfolio.identity`. Port **8080**. Issues JWT; other services
 - Users, roles (1:N: `roles` ← `users.role_id`), block/unblock, register/login/refresh/logout
 - Schema `identity`: `users`, `roles`, `refresh_sessions`
 - JWT claim: `role` = `roles.code`
-- Admin: `PUT /api/v1/admin/users/{id}/role`
+- Admin: `GET /api/v1/admin/users`, `PUT …/{id}/role`, `PUT …/{id}/blocked` (gateway must route `/api/v1/admin/**`)
 - Refresh cookie path `/api/v1/auth` (gateway must not StripPrefix)
 
 Out of scope: projects, finance, portfolio domain; M:N user_roles; permissions table.
