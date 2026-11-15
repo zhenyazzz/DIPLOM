@@ -1,12 +1,12 @@
 package com.portfolio.identity.auth;
 
 import com.portfolio.identity.api.auth.AuthApi;
-import com.portfolio.identity.api.auth.LoginRequest;
-import com.portfolio.identity.api.auth.RegisterRequest;
-import com.portfolio.identity.api.auth.TokenResponse;
-import com.portfolio.identity.api.identity.UserResponse;
-import com.portfolio.identity.auth.AuthService;
-import com.portfolio.identity.auth.RefreshCookieService;
+import com.portfolio.identity.api.auth.dto.LoginRequest;
+import com.portfolio.identity.api.auth.dto.RegisterRequest;
+import com.portfolio.identity.api.auth.dto.TokenResponse;
+import com.portfolio.identity.api.identity.dto.UserResponse;
+import com.portfolio.identity.auth.service.AuthService;
+import com.portfolio.identity.auth.service.RefreshCookieService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;

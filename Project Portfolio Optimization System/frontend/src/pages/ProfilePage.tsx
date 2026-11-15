@@ -7,6 +7,7 @@ import {
   Check,
   Globe2,
   LayoutGrid,
+  LogOut,
   Mail,
   MapPin,
   Phone,
@@ -16,6 +17,9 @@ import { motion } from "motion/react";
 import { Button } from "../components/ui/Button";
 import { currentUser } from "../data/profile";
 import { cn } from "../lib/cn";
+import { logout as apiLogout } from "../api/identity/auth";
+import { userRoleLabel } from "../api/identity/types";
+import { clearSession, getSession } from "../lib/session";
 import {
   easeOutExpo,
   fadeUp,
@@ -35,7 +39,27 @@ const toneDot: Record<(typeof currentUser.activity)[number]["tone"], string> = {
 
 export function ProfilePage() {
   const navigate = useNavigate();
-  const user = currentUser;
+  const session = getSession();
+  const user = {
+    ...currentUser,
+    email: session?.email ?? currentUser.email,
+    firstName: session?.displayName?.split(/\s+/)[0] ?? currentUser.firstName,
+    lastName:
+      session?.displayName?.split(/\s+/).slice(1).join(" ") || currentUser.lastName,
+  };
+
+  async function logout() {
+    try {
+      await apiLogout();
+    } finally {
+      clearSession();
+      navigate("/", { replace: true });
+    }
+  }
+
+  const roleLabel = session?.role
+    ? userRoleLabel[session.role]
+    : user.role;
 
   return (
     <motion.div
@@ -92,7 +116,7 @@ export function ProfilePage() {
                 <div className="mt-4 flex flex-wrap gap-2">
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-hairline bg-accent-soft px-3 py-1 text-[12px] font-medium text-accent">
                     <Shield size={12} />
-                    {user.role}
+                    {roleLabel}
                   </span>
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-hairline bg-panel-2/60 px-3 py-1 text-[12px] text-dim">
                     <Building2 size={12} />
@@ -119,6 +143,14 @@ export function ProfilePage() {
               >
                 <LayoutGrid size={14} />
                 Реестр
+              </Button>
+              <Button
+                variant="danger"
+                data-cursor-label="Выйти"
+                onClick={() => void logout()}
+              >
+                <LogOut size={14} />
+                Выйти
               </Button>
             </div>
           </div>
