@@ -1,8 +1,9 @@
 # Project Portfolio Optimizer — архитектура приложения
 
 > Версия 2.0 · 2026-11-15 · Канон для реализации и пояснительной записки  
-> Согласовано с: `02_DATABASE_Portfolio_Optimizer.md`, `docs/planning/PROJECT-BRIEF.md`  
-> Краткая копия решений: `docs/architecture/ARCHITECTURE.md`
+> Согласовано с: `02_DATABASE_Portfolio_Optimizer.md`  
+> Краткая копия решений: `docs/architecture/ARCHITECTURE.md`  
+> `docs/planning/PROJECT-BRIEF.md` — входной контекст (исторические фрагменты про core помечены устаревшими)
 
 ## 0. Назначение
 
@@ -70,10 +71,12 @@ browser ──► nginx :80 (SPA; /api/** → gateway; /ws/** → notify)
                  │
                  ▼
           gateway :8090
-           ├─ /api/v1/auth/**, /users/**     → identity :8080   PG(identity)
+           ├─ /api/v1/auth|users|admin/**    → identity :8080   PG(identity)
            ├─ /api/v1/reference|projects|
            │    criteria|scoring-models|
-           │    scenarios|runs|reports|audit → domain   :8084   PG(domain)
+           │    assessments|scores|
+           │    scenarios|runs|approvals|
+           │    reports|audit               → domain   :8084   PG(domain)
            │         ├─► calc :8081
            │         ├─► finance, fts
            │         └─► notify (события)
@@ -185,14 +188,23 @@ services/<name>/
 |---------|--------|-----|
 | `/api/v1/auth/**` | identity | нет (rate-limit на login) |
 | `/api/v1/users/**` | identity | да |
+| `/api/v1/admin/**` | identity | да (`ADMIN`) |
 | `/api/v1/reference/**`, `/api/v1/projects/**` | domain | да |
 | `/api/v1/criteria/**`, `/api/v1/scoring-models/**` | domain | да |
 | `/api/v1/assessments/**`, `/api/v1/scores/**` | domain | да |
-| `/api/v1/scenarios/**`, `/api/v1/runs/**`, `/api/v1/reports/**`, `/api/v1/audit/**` | domain | да |
+| `/api/v1/scenarios/**`, `/api/v1/runs/**`, `/api/v1/approvals/**`, `/api/v1/reports/**`, `/api/v1/audit/**` | domain | да |
 | `/api/v1/finance/**` | finance | да |
 | `/api/v1/notifications/**` | notify | да |
 | `/api/v1/files/**` | — | 404 (внутренний FTS) |
 | `/ws/**` | notify (через nginx) | JWT при handshake |
+
+**Публичные контракты (уточнение):**
+
+| Метод / путь | Назначение |
+|--------------|------------|
+| `GET/PUT /api/v1/admin/users/**` | Admin: список, смена `role_id`, block/unblock |
+| `GET /api/v1/approvals` | Inbox ЛПР (pending / фильтр) |
+| `POST /api/v1/scenarios/{id}/approvals` | Решение по конкретному run сценария → `domain.approvals` |
 
 **Не на gateway (только docker-сеть):** `calc`, `fts`, `notify` `/internal/**`, `domain` `/internal/**`.
 
@@ -234,7 +246,7 @@ Auth internal: тот же user JWT **или** общий `INTERNAL_API_KEY` (з
    domain @Async: локальные scores/links + snapshot из finance
    → calc/binary → run_items + audit_log → afterCommit → notify (RUN_COMPLETED)
    (рестарт mid-job: run в QUEUED/RUNNING → FAILED при старте / ручной retry)
-5. ЛПР approve → approvals + отчёт в FTS → afterCommit → notify (SCENARIO_APPROVED) → WS/email
+5. ЛПР: `POST /api/v1/scenarios/{id}/approvals` → `approvals` + отчёт в FTS → afterCommit → notify (SCENARIO_APPROVED) → WS/email
 6. Смена весов → domain сразу STALE; смена снимка → domain STALE lazy (см. §4)
 ```
 
@@ -311,11 +323,11 @@ Auth internal: тот же user JWT **или** общий `INTERNAL_API_KEY` (з
 
 | Wave | Содержание |
 |------|------------|
-| W1 | Канон-доки ✔; identity ✔; gateway → domain/notify ✔; каркасы `domain`+`notify`+`calc` ✔; core/project/scoring/portfolio удалены |
+| W1 | Канон-доки ✔; identity ✔ (в т.ч. `/admin/users`); gateway → domain/notify ✔; каркасы `domain`+`notify`+`calc` ✔; core/project/scoring/portfolio удалены |
 | W2 | fts ✔; calc SAW+0-1; domain reference+projects |
 | W3 | domain scoring → calc |
-| W4 | finance import/snapshot/NPV |
-| W5 | domain portfolio: job, approve, STALE, audit |
+| W4 | finance import/snapshot/NPV ✔ (миграции + каркас API; полный parse/NPV — довести) |
+| W5 | domain portfolio: job, approve (`/approvals`), STALE, audit |
 | W6 | notify WS+email stub; UI; отчёты в FTS |
 
 Откат по срокам: notify оставить polling-only в domain; calc/fts/finance/identity не сливать обратно в один JAR без нужды (REQ-INT ≥2 компонента уже закрыт).

@@ -134,30 +134,32 @@
 
 ---
 
-## 8. Уже принятые / предложенные архитектурные решения
+## 8. Архитектурные решения
 
-Из `architecture-options.md` (выбор студента 17.10.2026, статус `proposed`):
+> **Канон:** `01_ARCHITECTURE_Portfolio_Optimizer.md` + `02_DATABASE_Portfolio_Optimizer.md` (accepted 2026-11-15).  
+> Ниже — краткая актуальная топология; старый вариант «core + finance + calc» из `architecture-options.md` **отменён** (ARCH-02).
 
 ```text
-browser → frontend (React + TypeScript)
-              ↓ REST
-            core          ← модульный монолит Spring Boot, PostgreSQL, оркестрация
-           ↙     ↘
-   finance-service   calc-service
-   CSV/XLSX→JSON     SAW + 0-1 optimize (stateless)
+browser → nginx → gateway
+            ├─ auth/users/admin → identity
+            ├─ projects…approvals/audit → domain → calc, finance, fts, notify
+            ├─ finance/** → finance → fts
+            └─ notifications → notify
 ```
 
 | Часть | Ответственность |
 |-------|-----------------|
-| **core** | Users/roles, проекты, критерии/оценки (хранение), сценарии портфеля, оркестрация, БД, Security |
-| **calc** | Чистая математика по HTTP; без user-БД |
-| **finance** | Приём/парсинг/валидация финансовых файлов → нормализованный JSON; «интересное» (НБРБ/ERP-stub) позже |
+| **identity** | Users, roles (`role_id`), JWT issuance, admin |
+| **domain** | Справочники, проекты, scoring-данные, сценарии, runs, approvals, audit |
+| **finance** | Импорт/снимки/cash_flows + NPV |
+| **calc** | SAW + 0-1, stateless, без БД |
+| **fts** | MinIO wrapper; только docker-сеть |
+| **notify** | In-app + WS + email stub |
+| **gateway** | Маршруты, CORS, JWT check |
 | **frontend** | SPA |
-| **libs** | Переиспользуемые jar (не отдельные процессы) |
+| **libs** | `common-security`, `common-web` |
 
-**Откат по срокам:** влить finance в core, снаружи оставить только calc (всё равно ≥2 компонента).
-
-**Внутри core:** package-by-feature (модульный монолит), **не** микросервис на каждую сущность.
+**Откат по срокам:** notify → polling; не сливать calc/fts/finance/identity в один JAR без нужды.
 
 ---
 
@@ -175,17 +177,15 @@ Project Portfolio Optimization System/
   docs/planning/          ← исследование (историческое; канон — 01_ARCHITECTURE_…)
   contracts/openapi/      ← OpenAPI между сервисами
 ```
-> **Устарело ниже по auth-пути:** реализация auth — `services/identity`, не core.
-
-### Core — feature `001-user-auth` (сделано)
+### Identity — auth (сделано)
 
 - Hybrid auth: **access JWT** в JSON + **opaque refresh** в HttpOnly cookie.
-- Endpoints: register / login / refresh / logout; `GET /users/me`; admin users (list, change role, block).
-- Роли: 4 enum’а выше; `@PreAuthorize` на admin.
+- Endpoints: register / login / refresh / logout; `GET /api/v1/users/me`; admin `/api/v1/admin/users` (list, change role, block).
+- Роли: справочник `identity.roles` + `users.role_id` (1:N); коды `INITIATOR`…`ADMIN`; `@PreAuthorize` на admin.
 - BCrypt; refresh-сессии в БД (hash); ротация refresh; block → revoke all.
-- Flyway: users + refresh_sessions; seed Admin (`admin@portfolio.local`).
+- Flyway: users + roles + refresh_sessions; seed Admin (`admin@portfolio.local`).
 - Пакеты impl: `auth/`, `identity/`, `shared/`.
-- Зависимости: `common-security` (валидация JWT), `common-web` (включён `@EnableCommonWeb`, CRUD-ресурсов ещё нет).
+- Зависимости: `common-security` (валидация JWT), `common-web`.
 - Стек: Java 25, Spring Boot 4.1.x, PostgreSQL, MapStruct.
 
 ### Libs
@@ -212,10 +212,10 @@ Project Portfolio Optimization System/
 ## 10. Технические инварианты (не ломать)
 
 1. Деньги / веса / scores — только **`BigDecimal`**, не `double`/`float`.
-2. Issuance JWT — в **core**; validation — **`common-security`** (общий secret).
-3. Core **не** считает SAW/knapsack локально (constitution) — делегирует **calc** по HTTP.
-4. Парсинг CSV/XLSX — **finance** (или временно в core при откате).
-5. Вызов calc/finance: версионированный REST, таймауты, явные ошибки (не silent empty portfolio).
+2. Issuance JWT — в **identity**; validation — **`common-security`** (общий secret).
+3. **domain** не считает SAW/knapsack локально — делегирует **calc** по HTTP.
+4. Парсинг CSV/XLSX — **finance**; байты файлов — только через **fts**.
+5. Вызов calc/finance/fts/notify: версионированный REST, таймауты, явные ошибки (не silent empty portfolio).
 6. YAGNI: без Kafka/K8s/лишних модулей.
 7. Тесты обязательны для фичи (unit + integration; IT часто нужен Docker/Testcontainers).
 
@@ -236,7 +236,7 @@ Project Portfolio Optimization System/
 | Q-DOM-02 | Один бюджет vs периоды | v1: один лимит |
 | Q-DOM-05 | Валюты | v1: одна валюта |
 | Роли | Схлопнуть предметные роли КП в 4 enum | нужно решение |
-| Finance | Отдельный сервис сразу или позже влить в core | `proposed`: отдельный тонкий |
+| Finance | Отдельный сервис | ✔ отдельный (ARCH-03) |
 | Async optimize | Job API (FR-15/API-3) vs sync для n≈30 | в КП — async id |
 | Уведомления FR-18 | Нужны ли в v1 или stub | риск срока |
 
@@ -244,23 +244,12 @@ Project Portfolio Optimization System/
 
 ## 13. Инструкция следующему агенту (архитектура)
 
-Спроектируй и обоснуй:
+Архитектура **принята** (см. `01_ARCHITECTURE_…` / `docs/architecture/ARCHITECTURE.md`). Дальше — реализация по волнам W2–W6, не переизобретать границы сервисов.
 
-1. **Границы сервисов** (core / calc / finance / frontend / libs) — что внутри какого процесса и почему это закрывает REQ-INT (≥2 компонента).
-2. **Пакеты внутри core** (package-by-feature) под рост до 10–15 сущностей.
-3. **Контракты** HTTP (черновик ресурсов OpenAPI): core↔frontend, core→calc, core→finance.
-4. **Поток данных** сквозного сценария: импорт → баллы → оптимизация → утверждение.
-5. **Модель данных** (логическая ER) с оценкой числа таблиц ≥10.
-6. **Порядок реализации фич** (waves), чтобы быстрее закрыть демо и бланк.
-7. **Явный план отката**, если сроки жмут (finance внутрь core).
+Опирайся на:
 
-Опирайся на этот brief + при необходимости:
-
-- `docs/planning/architecture-options.md`
-- `docs/planning/domain-research.md`
-- `docs/planning/mathematical-options.md`
-- `docs/planning/assignment-requirements.md`
-- `libs/*/AGENTS.md`
-- `01_ARCHITECTURE_Portfolio_Optimizer.md` (канон вместо устаревшего core constitution)
-
-**Не** начинай массовую реализацию кода, пока студент не утвердит архитектуру.
+- `01_ARCHITECTURE_Portfolio_Optimizer.md`
+- `02_DATABASE_Portfolio_Optimizer.md`
+- `contracts/openapi/*`
+- `libs/*/AGENTS.md`, `services/*/AGENTS.md`
+- `docs/planning/*` — исторический контекст (не перекрывает канон)

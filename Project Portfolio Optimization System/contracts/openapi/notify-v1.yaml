@@ -2,7 +2,10 @@ openapi: 3.0.3
 info:
   title: Notify API
   version: 0.1.0
-  description: In-app notifications, internal events, WebSocket push (scaffold).
+  description: >
+    In-app notifications, internal events, WebSocket push (scaffold).
+    Typical event_type: IMPORT_PUBLISHED, IMPORT_FAILED, RUN_COMPLETED, RUN_FAILED,
+    RUN_STALE, SCENARIO_APPROVED, SCENARIO_REJECTED, MODEL_ACTIVATED.
 servers:
   - url: /
 paths:

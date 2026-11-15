@@ -7,9 +7,9 @@ Package root `com.portfolio.fts`. Port **8083**. Only wrapper over MinIO in this
 
 File transfer for Portfolio:
 
-- Internal only: gateway does not route `/api/files/**`; browsers never call FTS.
-  Uploads go browser → core → FTS. Downloads: core checks domain rights, then requests a presigned URL from FTS
-- Metadata in PostgreSQL schema `fts` (same instance as core); bytes in MinIO. Owner is `owner_id` (`ownerId` UUID in API)
+- Internal only: gateway returns 404 for `/api/v1/files/**`; browsers never call FTS.
+  Uploads go browser → domain/finance → FTS. Downloads: domain/finance checks rights, then requests a presigned URL from FTS
+- Metadata in PostgreSQL schema `fts` (same PG instance as other services); bytes in MinIO. Owner is `owner_id` (`ownerId` UUID in API)
 - Buckets `IMPORTS` / `REPORTS` / `ATTACHMENTS` → `fts-imports`, `fts-reports`, `fts-attachments` (created on start)
 - Object key = UUID; client filename is metadata only; sha256 hashed on upload
 - JWT validate-only via `common-security`; `common-web` only for `BaseEntity` (no CRUD kit)
@@ -85,7 +85,7 @@ RFC 9457 `ProblemDetail` + property `code`:
 | 503 | `STORAGE_UNAVAILABLE` |
 | 401 | `UNAUTHORIZED` (from `common-security`) |
 
-Delete: owner (`ownerId`) or `ADMIN`. Read: any valid JWT (core/finance with the user's token). Soft-deleted files are 404.
+Delete: owner (`ownerId`) or `ADMIN`. Read: any valid JWT (domain/finance with the user's token). Soft-deleted files are 404.
 
 ## Content signature
 
@@ -110,7 +110,7 @@ First bytes vs declared type (no Tika). Head size 8 KiB. Mismatch → 415 `CONTE
 
 **Don't**
 
-- Expose FTS to browsers or add a gateway route for `/api/files/**`
+- Expose FTS to browsers or add a gateway route for `/api/v1/files/**`
 - Give other services MinIO credentials or endpoints
 - Version, share, or ACL individual objects here
 - Introduce `BigDecimal` — FTS stores bytes and metadata, not money

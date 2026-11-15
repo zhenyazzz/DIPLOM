@@ -189,7 +189,7 @@ CREATE INDEX idx_refresh_sessions_expires_at ON identity.refresh_sessions (expir
 - Refresh в БД — только `token_hash`; ротация через `replaced_by_id`.
 - Блокировка — `blocked=true`; физическое удаление с историей не выполняется.
 - У пользователя ровно одна роль (`role_id NOT NULL`); регистрация → `INITIATOR`.
-- Админ: `PUT /api/v1/admin/users/{id}/role` меняет `role_id`.
+- Админ (gateway → identity): `GET /api/v1/admin/users`, `PUT /api/v1/admin/users/{id}/role`, `PUT /api/v1/admin/users/{id}/blocked`.
 - Нельзя снять `ADMIN` / заблокировать последнего активного администратора.
 - JWT claim `role` = `roles.code` → authority `ROLE_{code}` → `@PreAuthorize("hasRole('ADMIN')")`.
 - Таблица `permissions` / `user_roles` **не** вводятся: для КП достаточно одной роли на пользователя.
@@ -722,6 +722,7 @@ CREATE INDEX idx_reports_run ON domain.reports(run_id);
 - При `INFEASIBLE` строки `run_items` могут отсутствовать или содержать `selected=false` для всех — фиксируется в коде единообразно; диагностика пишется в `error_code`/`error_message` и/или audit.
 - При рестарте сервиса mid-job: runs в `QUEUED`/`RUNNING` переводятся в `FAILED` (или ручной retry) — см. сквозной сценарий архитектуры.
 - Утверждение (`approvals`) ссылается на конкретный `run_id`; утверждённый сценарий не редактируется (state machine + `version`).
+- Публичный API (ARCH §4): `GET /api/v1/approvals` (inbox ЛПР); `POST /api/v1/scenarios/{id}/approvals` (решение по run → строка `approvals` + notify afterCommit).
 
 ### 7.6 Отчёты
 
@@ -1116,7 +1117,7 @@ ORDER BY a.assigned_at;
 | W2 | fts | ✔ files + owner_id |
 | W2 | domain | reference + projects + links + goals + attachments |
 | W3 | domain | criteria, scoring_models, model_weights, assessments, project_scores |
-| W4 | finance | ✔ import_sessions, import_errors, financial_snapshots, cash_flows |
+| W4 | finance | ✔ import_sessions, import_errors, financial_snapshots, cash_flows (миграции ahead; parse/NPV — довести в коде) |
 | W5 | domain | scenarios, scenario_items, optimization_runs, run_items, approvals, reports, audit_log |
 | W6 | notify | notifications, delivery_attempts |
 

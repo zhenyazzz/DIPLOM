@@ -6,9 +6,9 @@
 
 ## Решения
 
-- **Доступ к файлам (D1).** FTS — внутренний сервис: браузер в него не ходит, gateway не маршрутизирует `/api/files/**`.
-  Права на доменные объекты (импорт, отчёт, вложение) проверяет core, затем выдаёт браузеру presigned URL от FTS.
-  Внутри FTS: читать может любой валидный JWT (это core/finance с токеном пользователя), удалять — владелец или `ADMIN`.
+- **Доступ к файлам (D1).** FTS — внутренний сервис: браузер в него не ходит, gateway отдаёт 404 на `/api/v1/files/**`.
+  Права на доменные объекты (импорт, отчёт, вложение) проверяет domain/finance, затем выдаёт браузеру presigned URL от FTS.
+  Внутри FTS: читать может любой валидный JWT (domain/finance с токеном пользователя), удалять — владелец или `ADMIN`.
 - **Владелец (D2).** Явная колонка `owner_id UUID` из `SecuritySupport.requireUserId()`; в API `createdBy` → `ownerId: UUID`.
   Ownership больше не зависит от формата `JwtAuditorAware`.
 - **Транзакции (D3).** `upload` без транзакции вокруг сетевой загрузки; транзакция только на `save`.
@@ -39,7 +39,7 @@
 - [x] T102 [P] `file/ContentSignatureVerifier` (D4) + `ContentSignatureVerifierTest` — чистый класс без Spring-зависимостей,
   сигнатура `boolean matches(String contentType, byte[] head)`, `static final int HEAD_SIZE = 8192`.
 - [x] T103 [P] Документы (D1, D2, D4, D5): `contracts/openapi/fts-v1.yaml` (`ownerId`, `CONTENT_MISMATCH`, `UPLOAD_READ_FAILED`),
-  `docs/architecture/ARCHITECTURE.md` (FTS внутренний, маршрут gateway убран, скачивание через presigned URL от core),
+  `docs/architecture/ARCHITECTURE.md` (FTS внутренний, маршрут gateway убран, скачивание через presigned URL от domain/finance),
   `services/fts/AGENTS.md`.
 
 ### Фаза 2 — тесты (параллельно)

@@ -55,7 +55,7 @@ Role claim(s) → authorities `ROLE_{code}` (supports `roles` array and single `
 2. Set `portfolio.security.jwt.secret` (and permit-all for public auth routes if any)
 3. Protect privileged operations with method annotations, e.g. `@PreAuthorize("hasRole('ADMIN')")`
 4. Optionally inject `SecuritySupport` / `AccessTokenVerifier` / rely on `AuditorAware` for JPA auditing
-5. Keep **issuance** in the issuer service (core `JwtTokenService`) — do not add sign/issue APIs here
+5. Keep **issuance** in **identity** (`JwtTokenService`) — do not add sign/issue APIs here
 
 ### Opt out of default filter chain
 
