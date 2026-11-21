@@ -17,7 +17,8 @@ Single entry point behind nginx for `/api/**`. Routes by prefix (no StripPrefix)
 - Early JWT via `common-security`; login rate-limit; CORS
 - `/api/v1/files/**` → 404 (FTS internal)
 - `/ws/**` не здесь — nginx → notify напрямую
-- No business logic, no token issuance, no DB
+- No token issuance, no DB
+- GraphQL (`POST /graphql`, GraphiQL `/graphiql`) — только чтение карточки инициативы. Resolver сразу отдаёт запрос в `PortfolioQueryService`. Подразделение и цели приходят через `DomainProjectCatalog`, инициатор через `ParticipantDirectory`. Сейчас оба порта — заглушки без сети (ЛР3). Реальный gRPC вместо заглушек — следующая лаба, не этот этап.
 
 Канон маршрутов: `01_ARCHITECTURE_Portfolio_Optimizer.md` §4.
 
@@ -30,3 +31,7 @@ java -jar services/gateway/target/gateway.jar
 ```
 
 Needs `CORE_JWT_SECRET` (≥ 32 UTF-8 bytes).
+
+## Lombok
+
+Сущности — `@Getter`, `@Setter`, `@NoArgsConstructor`. Сервисы и контроллеры — `@RequiredArgsConstructor`. Неизменяемые DTO — `record`. `@Value` не используй.

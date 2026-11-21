@@ -29,6 +29,7 @@ public class WebConfig {
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/api/**", cors);
+        source.registerCorsConfiguration("/graphql", cors);
         return source;
     }
 }
