@@ -5,6 +5,10 @@ server:
 spring:
   application:
     name: portfolio-gateway
+  graphql:
+    graphiql:
+      enabled: true
+      path: /graphiql
   http:
     clients:
       connect-timeout: ${GATEWAY_CONNECT_TIMEOUT:2s}
@@ -95,6 +99,10 @@ portfolio:
       - POST:/api/v1/auth/refresh
       - POST:/api/v1/auth/logout
       - GET:/actuator/health
+      - POST:/graphql
+      - GET:/graphql
+      - GET:/graphiql
+      - GET:/graphiql/**
 
 gateway:
   cors:
