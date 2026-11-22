@@ -31,6 +31,7 @@ public final class TestJwtFactory {
         try {
             JWTClaimsSet.Builder builder = new JWTClaimsSet.Builder()
                     .subject(subject.toString())
+                    .jwtID(UUID.randomUUID().toString())
                     .issueTime(Date.from(issuedAt))
                     .expirationTime(Date.from(expiresAt));
             if (role != null) {

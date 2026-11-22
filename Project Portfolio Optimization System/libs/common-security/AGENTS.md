@@ -15,7 +15,7 @@ Reusable JWT **validation** kit for Portfolio servlet services:
 - `@EnableMethodSecurity` for `@PreAuthorize` / `@Secured`
 - Problem Details 401 (`UNAUTHORIZED`) / 403 (`FORBIDDEN`) entry-point and access-denied handlers
 - `SecuritySupport.requireUserId()` / `requireRole()` / `requireRoles()` / `hasRole()` (fail-fast)
-- `AccessTokenVerifier` + `AccessTokenClaims` for non-HTTP verification
+- `AccessTokenVerifier` + `AccessTokenClaims` (includes `jti`) for non-HTTP verification
 - `JwtAuditorAware` (`AuditorAware<String>`) when missing
 
 Out of scope: token issuance/signing, refresh cookies, user CRUD, JWKS/issuer-uri, path→role YAML maps.

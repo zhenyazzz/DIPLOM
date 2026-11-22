@@ -33,15 +33,17 @@ public class JwtTokenService {
         }
     }
 
-    public String issueAccessToken(UserEntity user) {
+    public IssuedAccessToken issueAccessToken(UserEntity user) {
         Instant now = Instant.now();
         Instant exp = now.plus(authProperties.getJwt().getAccessTokenTtl());
         if (user.getRole() == null || user.getRole().getCode() == null) {
             throw new IllegalStateException("User has no role assigned: " + user.getId());
         }
+        String jti = UUID.randomUUID().toString();
         try {
             JWTClaimsSet claims = new JWTClaimsSet.Builder()
                     .subject(user.getId().toString())
+                    .jwtID(jti)
                     .claim("role", user.getRole().getCode())
                     .claim("email", user.getEmail())
                     .issueTime(Date.from(now))
@@ -49,10 +51,13 @@ public class JwtTokenService {
                     .build();
             SignedJWT jwt = new SignedJWT(new JWSHeader(JWSAlgorithm.HS256), claims);
             jwt.sign(new MACSigner(secretBytes));
-            return jwt.serialize();
+            return new IssuedAccessToken(jwt.serialize(), jti, user.getRole().getCode());
         } catch (JOSEException e) {
             throw new IllegalStateException("Failed to sign access token", e);
         }
+    }
+
+    public record IssuedAccessToken(String token, String jti, String role) {
     }
 
     public long accessExpiresInSeconds() {

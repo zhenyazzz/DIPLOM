@@ -5,6 +5,7 @@ portfolio:
       secret: gateway-integration-test-jwt-secret-at-least-40-bytes!!
 
 gateway:
+  identity-url: http://localhost:9
   cors:
     allowed-origins: http://localhost:5173
   login-rate-limit:

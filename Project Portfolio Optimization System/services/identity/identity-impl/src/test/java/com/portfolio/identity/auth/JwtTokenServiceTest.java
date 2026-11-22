@@ -32,10 +32,11 @@ class JwtTokenServiceTest {
         user.setEmail("alice@example.com");
         user.setRole(role(UserRole.INITIATOR));
 
-        String token = jwtTokenService.issueAccessToken(user);
-        JWTClaimsSet claims = jwtTokenService.parse(token);
+        JwtTokenService.IssuedAccessToken issued = jwtTokenService.issueAccessToken(user);
+        JWTClaimsSet claims = jwtTokenService.parse(issued.token());
 
         assertThat(claims.getSubject()).isEqualTo(user.getId().toString());
+        assertThat(claims.getJWTID()).isEqualTo(issued.jti());
         assertThat(claims.getClaim("role")).isEqualTo("INITIATOR");
         assertThat(claims.getClaim("email")).isEqualTo("alice@example.com");
         assertThat(claims.getIssueTime()).isNotNull();
@@ -50,7 +51,7 @@ class JwtTokenServiceTest {
         user.setEmail("bob@example.com");
         user.setRole(role(UserRole.ADMIN));
 
-        String token = jwtTokenService.issueAccessToken(user);
+        String token = jwtTokenService.issueAccessToken(user).token();
         String tampered = token.substring(0, token.length() - 4) + "xxxx";
 
         assertThatThrownBy(() -> jwtTokenService.parse(tampered))

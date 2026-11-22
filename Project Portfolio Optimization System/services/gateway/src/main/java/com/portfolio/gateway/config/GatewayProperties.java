@@ -1,6 +1,7 @@
 package com.portfolio.gateway.config;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import java.time.Duration;
@@ -13,7 +14,8 @@ import org.springframework.validation.annotation.Validated;
 @ConfigurationProperties("gateway")
 public record GatewayProperties(
         @Valid @NotNull @DefaultValue Cors cors,
-        @Valid @NotNull @DefaultValue LoginRateLimit loginRateLimit) {
+        @Valid @NotNull @DefaultValue LoginRateLimit loginRateLimit,
+        @NotBlank @DefaultValue("http://localhost:8080") String identityUrl) {
 
     public record Cors(@NotNull @DefaultValue("http://localhost:5173") List<String> allowedOrigins) {}
 

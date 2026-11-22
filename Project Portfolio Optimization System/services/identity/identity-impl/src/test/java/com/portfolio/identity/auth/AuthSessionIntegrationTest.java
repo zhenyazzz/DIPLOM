@@ -75,6 +75,12 @@ class AuthSessionIntegrationTest extends PostgresIntegrationTest {
                 .andExpect(jsonPath("$.email").value(email))
                 .andExpect(jsonPath("$.role").value("INITIATOR"));
 
+        mockMvc.perform(get("/api/v1/auth/sessions/active")
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.jti").isNotEmpty())
+                .andExpect(jsonPath("$.role").value("INITIATOR"));
+
         MvcResult refreshResult = mockMvc.perform(post("/api/v1/auth/refresh")
                         .cookie(firstRefresh))
                 .andExpect(status().isOk())
@@ -86,6 +92,12 @@ class AuthSessionIntegrationTest extends PostgresIntegrationTest {
         assertThat(rotated).isNotNull();
         assertThat(rotated.getValue()).isNotEqualTo(firstRaw);
 
+        JsonNode refreshBody = jsonMapper.readTree(refreshResult.getResponse().getContentAsString());
+        String refreshedAccess = refreshBody.get("accessToken").asString();
+        mockMvc.perform(get("/api/v1/auth/sessions/active")
+                        .header("Authorization", "Bearer " + refreshedAccess))
+                .andExpect(status().isOk());
+
         mockMvc.perform(post("/api/v1/auth/refresh").cookie(firstRefresh))
                 .andExpect(status().isUnauthorized());
 
@@ -95,6 +107,54 @@ class AuthSessionIntegrationTest extends PostgresIntegrationTest {
 
         mockMvc.perform(post("/api/v1/auth/refresh").cookie(rotated))
                 .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(get("/api/v1/auth/sessions/active")
+                        .header("Authorization", "Bearer " + refreshedAccess))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void validJwtWithoutRedisSessionIsUnauthorized() throws Exception {
+        String email = "no-session@example.com";
+        String password = "password123";
+
+        mockMvc.perform(post("/api/v1/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "email": "%s",
+                                  "displayName": "No Session",
+                                  "password": "%s"
+                                }
+                                """.formatted(email, password)))
+                .andExpect(status().isCreated());
+
+        MvcResult loginResult = mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "email": "%s",
+                                  "password": "%s"
+                                }
+                                """.formatted(email, password)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        JsonNode loginBody = jsonMapper.readTree(loginResult.getResponse().getContentAsString());
+        String accessToken = loginBody.get("accessToken").asString();
+
+        mockMvc.perform(get("/api/v1/auth/sessions/active")
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk());
+
+        Cookie refresh = loginResult.getResponse().getCookie(RefreshCookieService.COOKIE_NAME);
+        mockMvc.perform(post("/api/v1/auth/logout").cookie(refresh))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/v1/auth/sessions/active")
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
     }
 
     @Test

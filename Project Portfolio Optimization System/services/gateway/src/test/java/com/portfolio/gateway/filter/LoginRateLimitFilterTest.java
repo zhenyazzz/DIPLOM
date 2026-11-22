@@ -26,7 +26,8 @@ class LoginRateLimitFilterTest {
         clock = new MutableClock();
         GatewayProperties properties = new GatewayProperties(
                 new GatewayProperties.Cors(List.of("http://localhost:5173")),
-                new GatewayProperties.LoginRateLimit(3, Duration.ofMinutes(1)));
+                new GatewayProperties.LoginRateLimit(3, Duration.ofMinutes(1)),
+                "http://localhost:8080");
         filter = new LoginRateLimitFilter(properties, new ProblemResponses(JsonMapper.builder().build()), clock);
     }
 

@@ -59,4 +59,14 @@ public class PortfolioGraphqlErrors {
                 .extensions(Map.of("code", "BAD_REQUEST"))
                 .build();
     }
+
+    @GraphQlExceptionHandler
+    public GraphQLError security(GraphqlSecurityException ex) {
+        ErrorType type = "FORBIDDEN".equals(ex.getCode()) ? ErrorType.FORBIDDEN : ErrorType.UNAUTHORIZED;
+        return GraphqlErrorBuilder.newError()
+                .message(ex.getMessage())
+                .errorType(type)
+                .extensions(Map.of("code", ex.getCode()))
+                .build();
+    }
 }

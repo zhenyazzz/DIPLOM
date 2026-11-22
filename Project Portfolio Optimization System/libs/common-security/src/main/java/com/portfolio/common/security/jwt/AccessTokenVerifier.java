@@ -32,6 +32,7 @@ public class AccessTokenVerifier {
             List<String> roles = JwtRoleClaims.extract(jwt, roleClaim);
             return new AccessTokenClaims(
                     userId,
+                    jwt.getId(),
                     JwtRoleClaims.primary(roles),
                     roles,
                     jwt.getClaimAsString("email"),
