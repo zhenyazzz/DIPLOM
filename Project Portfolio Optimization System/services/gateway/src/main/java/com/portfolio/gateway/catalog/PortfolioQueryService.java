@@ -1,5 +1,6 @@
 package com.portfolio.gateway.catalog;
 
+import java.math.BigDecimal;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
@@ -21,12 +22,15 @@ public class PortfolioQueryService {
         return toCard(snapshot);
     }
 
-    public List<ProjectCard> projects(ProjectFilter filter) {
-        ProjectStatus status = filter == null ? null : filter.status();
-        return projects.findAll(status).stream()
+    public List<ProjectCard> projects(ProjectFilter filter, ProjectSort sort) {
+        return projects.findAll(filter).stream()
                 .map(this::toCard)
-                .sorted(Comparator.comparing(ProjectCard::code))
+                .sorted(comparator(sort))
                 .toList();
+    }
+
+    public ProjectRegistryStats projectRegistryStats(ProjectFilter filter) {
+        return projects.stats(filter);
     }
 
     private ProjectCard toCard(ProjectSnapshot snapshot) {
@@ -44,6 +48,22 @@ public class PortfolioQueryService {
                 snapshot.department(),
                 goals,
                 initiator);
+    }
+
+    private static Comparator<ProjectCard> comparator(ProjectSort sort) {
+        if (sort == null || sort.field() == null) {
+            return Comparator.comparing(ProjectCard::code);
+        }
+        Comparator<ProjectCard> comparator = switch (sort.field()) {
+            case CODE -> Comparator.comparing(ProjectCard::code);
+            case TITLE -> Comparator.comparing(ProjectCard::title);
+            case REQUESTED_BUDGET -> Comparator.comparing(card -> new BigDecimal(card.requestedBudget()));
+            case STATUS -> Comparator.comparing(card -> card.status().name());
+        };
+        if (sort.direction() == SortDirection.DESC) {
+            return comparator.reversed();
+        }
+        return comparator;
     }
 
     private static UUID parseId(String rawId) {

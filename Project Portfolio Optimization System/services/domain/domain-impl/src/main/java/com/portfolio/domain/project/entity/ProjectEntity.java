@@ -1,10 +1,10 @@
 package com.portfolio.domain.project.entity;
 
+import com.portfolio.common.web.domain.BaseEntity;
 import com.portfolio.domain.reference.entity.DepartmentEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
-import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
@@ -21,10 +21,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-public class ProjectEntity {
-
-    @Id
-    private UUID id;
+public class ProjectEntity extends BaseEntity {
 
     @Column(nullable = false, unique = true, length = 50)
     private String code;
@@ -71,13 +68,4 @@ public class ProjectEntity {
 
     @Column(name = "archived_at")
     private Instant archivedAt;
-
-    @Column(name = "created_at", nullable = false)
-    private Instant createdAt;
-
-    @Column(name = "updated_at", nullable = false)
-    private Instant updatedAt;
-
-    @Column(nullable = false)
-    private long version;
 }

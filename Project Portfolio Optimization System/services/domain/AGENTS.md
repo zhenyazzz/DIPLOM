@@ -18,7 +18,7 @@ Port **8084**. Schema `domain`.
 
 Scaffold — таблицы и OpenAPI в волнах W2–W5.
 
-Чтение карточки инициативы: `ProjectQueryService` и `GET /api/v1/projects`. Только схема `domain`. Инициатор хранится как UUID, в identity сервис не ходит.
+Реестр инициатив: `ProjectQueryService` / `ProjectLifecycleService`. Контракты REST в `domain-api`: `ProjectQueryApi`, `ProjectCommandApi`; DTO в `com.portfolio.domain.api.project.dto`. Контроллеры в `domain-impl` только `implements` эти API. Entity (`ProjectEntity`, `DepartmentEntity`, `StrategicGoalEntity`) extends `common-web` `BaseEntity` (`@CreatedDate` / `@LastModifiedDate` / `@Version`); даты вручную не ставить. Только схема `domain`. Инициатор хранится как UUID, в identity сервис не ходит.
 
 ## Flyway
 

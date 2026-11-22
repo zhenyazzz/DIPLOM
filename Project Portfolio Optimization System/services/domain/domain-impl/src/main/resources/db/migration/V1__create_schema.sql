@@ -8,6 +8,9 @@ CREATE TABLE domain.departments (
     is_active   BOOLEAN      NOT NULL DEFAULT TRUE,
     created_at  TIMESTAMPTZ  NOT NULL DEFAULT now(),
     updated_at  TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    created_by  VARCHAR(255),
+    updated_by  VARCHAR(255),
+    version     BIGINT       NOT NULL DEFAULT 0,
     CONSTRAINT uk_departments_code UNIQUE (code),
     CONSTRAINT fk_departments_parent
         FOREIGN KEY (parent_id) REFERENCES domain.departments (id) ON DELETE RESTRICT,
@@ -40,6 +43,9 @@ CREATE TABLE domain.strategic_goals (
     is_active   BOOLEAN      NOT NULL DEFAULT TRUE,
     created_at  TIMESTAMPTZ  NOT NULL DEFAULT now(),
     updated_at  TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    created_by  VARCHAR(255),
+    updated_by  VARCHAR(255),
+    version     BIGINT       NOT NULL DEFAULT 0,
     CONSTRAINT uk_strategic_goals_code UNIQUE (code),
     CONSTRAINT ck_strategic_goals_priority
         CHECK (priority > 0)
@@ -68,6 +74,8 @@ CREATE TABLE domain.projects (
     archived_at       TIMESTAMPTZ,
     created_at        TIMESTAMPTZ   NOT NULL DEFAULT now(),
     updated_at        TIMESTAMPTZ   NOT NULL DEFAULT now(),
+    created_by        VARCHAR(255),
+    updated_by        VARCHAR(255),
     version           BIGINT        NOT NULL DEFAULT 0,
     CONSTRAINT uk_projects_code UNIQUE (code),
     CONSTRAINT ck_projects_status CHECK (status IN (

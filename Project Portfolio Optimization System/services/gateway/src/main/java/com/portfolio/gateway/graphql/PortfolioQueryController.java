@@ -3,6 +3,8 @@ package com.portfolio.gateway.graphql;
 import com.portfolio.gateway.catalog.PortfolioQueryService;
 import com.portfolio.gateway.catalog.ProjectCard;
 import com.portfolio.gateway.catalog.ProjectFilter;
+import com.portfolio.gateway.catalog.ProjectRegistryStats;
+import com.portfolio.gateway.catalog.ProjectSort;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.graphql.data.method.annotation.Argument;
@@ -21,7 +23,12 @@ public class PortfolioQueryController {
     }
 
     @QueryMapping
-    public List<ProjectCard> projects(@Argument ProjectFilter filter) {
-        return queries.projects(filter);
+    public List<ProjectCard> projects(@Argument ProjectFilter filter, @Argument ProjectSort sort) {
+        return queries.projects(filter, sort);
+    }
+
+    @QueryMapping
+    public ProjectRegistryStats projectRegistryStats(@Argument ProjectFilter filter) {
+        return queries.projectRegistryStats(filter);
     }
 }

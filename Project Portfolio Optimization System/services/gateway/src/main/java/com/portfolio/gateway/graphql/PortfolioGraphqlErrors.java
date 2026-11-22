@@ -1,5 +1,8 @@
 package com.portfolio.gateway.graphql;
 
+import com.portfolio.gateway.catalog.CatalogValidationException;
+import com.portfolio.gateway.catalog.ConflictException;
+import com.portfolio.gateway.catalog.IllegalStatusTransitionException;
 import com.portfolio.gateway.catalog.InvalidProjectIdException;
 import com.portfolio.gateway.catalog.ProjectNotFoundException;
 import graphql.GraphQLError;
@@ -23,6 +26,33 @@ public class PortfolioGraphqlErrors {
 
     @GraphQlExceptionHandler
     public GraphQLError badId(InvalidProjectIdException ex) {
+        return GraphqlErrorBuilder.newError()
+                .message(ex.getMessage())
+                .errorType(ErrorType.BAD_REQUEST)
+                .extensions(Map.of("code", "BAD_REQUEST"))
+                .build();
+    }
+
+    @GraphQlExceptionHandler
+    public GraphQLError illegalTransition(IllegalStatusTransitionException ex) {
+        return GraphqlErrorBuilder.newError()
+                .message(ex.getMessage())
+                .errorType(ErrorType.BAD_REQUEST)
+                .extensions(Map.of("code", "ILLEGAL_STATUS_TRANSITION"))
+                .build();
+    }
+
+    @GraphQlExceptionHandler
+    public GraphQLError conflict(ConflictException ex) {
+        return GraphqlErrorBuilder.newError()
+                .message(ex.getMessage())
+                .errorType(ErrorType.BAD_REQUEST)
+                .extensions(Map.of("code", "DUPLICATE_CODE"))
+                .build();
+    }
+
+    @GraphQlExceptionHandler
+    public GraphQLError invalid(CatalogValidationException ex) {
         return GraphqlErrorBuilder.newError()
                 .message(ex.getMessage())
                 .errorType(ErrorType.BAD_REQUEST)

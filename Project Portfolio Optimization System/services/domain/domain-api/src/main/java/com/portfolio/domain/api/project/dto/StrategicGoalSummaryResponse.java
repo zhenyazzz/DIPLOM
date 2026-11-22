@@ -1,4 +1,4 @@
-package com.portfolio.domain.api.project;
+package com.portfolio.domain.api.project.dto;
 
 import java.util.UUID;
 
