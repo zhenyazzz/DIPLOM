@@ -12,6 +12,7 @@ import graphql.language.Document;
 import graphql.language.Field;
 import graphql.language.OperationDefinition;
 import graphql.language.Selection;
+import graphql.parser.InvalidSyntaxException;
 import graphql.parser.Parser;
 import java.util.ArrayList;
 import java.util.List;
@@ -39,7 +40,17 @@ public class GraphqlSecurityInterceptor implements WebGraphQlInterceptor {
 
     @Override
     public Mono<WebGraphQlResponse> intercept(WebGraphQlRequest request, Chain chain) {
-        List<String> rootFields = rootFields(request);
+        List<String> rootFields;
+        try {
+            rootFields = rootFields(request);
+        } catch (InvalidSyntaxException | IllegalArgumentException ex) {
+            // Postman GraphQL body mode / empty body → do not 500 the servlet
+            return Mono.just(errorResponse(
+                    request,
+                    "BAD_REQUEST",
+                    "Invalid or empty GraphQL document. Send JSON: {\"query\":\"...\"}"));
+        }
+
         boolean needsAuth = rootFields.stream().anyMatch(GraphqlOperationAccess::requiresAuthentication);
         if (!needsAuth) {
             return chain.next(request);
@@ -97,7 +108,11 @@ public class GraphqlSecurityInterceptor implements WebGraphQlInterceptor {
     }
 
     private static List<String> rootFields(WebGraphQlRequest request) {
-        Document document = new Parser().parseDocument(request.getDocument());
+        String raw = request.getDocument();
+        if (raw == null || raw.isBlank()) {
+            throw new IllegalArgumentException("empty GraphQL document");
+        }
+        Document document = new Parser().parseDocument(raw);
         OperationDefinition operation = selectOperation(document, request.getOperationName());
         if (operation == null || operation.getSelectionSet() == null) {
             return List.of();
@@ -130,7 +145,11 @@ public class GraphqlSecurityInterceptor implements WebGraphQlInterceptor {
 
     private static WebGraphQlResponse errorResponse(WebGraphQlRequest request, String code, String message) {
         ErrorType errorType =
-                "FORBIDDEN".equals(code) ? ErrorType.FORBIDDEN : ErrorType.UNAUTHORIZED;
+                switch (code) {
+                    case "FORBIDDEN" -> ErrorType.FORBIDDEN;
+                    case "BAD_REQUEST" -> ErrorType.BAD_REQUEST;
+                    default -> ErrorType.UNAUTHORIZED;
+                };
         GraphQLError error = GraphqlErrorBuilder.newError()
                 .errorType(errorType)
                 .message(message)
@@ -139,8 +158,12 @@ public class GraphqlSecurityInterceptor implements WebGraphQlInterceptor {
         ExecutionResult result = ExecutionResultImpl.newExecutionResult()
                 .addError(error)
                 .build();
-        ExecutionInput.Builder inputBuilder = ExecutionInput.newExecutionInput()
-                .query(request.getDocument());
+        String query = request.getDocument();
+        if (query == null || query.isBlank()) {
+            // ExecutionInput requires a non-blank query string
+            query = "{ __typename }";
+        }
+        ExecutionInput.Builder inputBuilder = ExecutionInput.newExecutionInput().query(query);
         if (request.getOperationName() != null) {
             inputBuilder.operationName(request.getOperationName());
         }
