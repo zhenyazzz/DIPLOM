@@ -18,4 +18,8 @@ public interface ProjectRepository extends JpaRepository<ProjectEntity, UUID> {
 
     @Query("select p from ProjectEntity p join fetch p.department where p.id = :id")
     Optional<ProjectEntity> findWithDepartmentById(@Param("id") UUID id);
+
+    boolean existsByCode(String code);
+
+    Optional<ProjectEntity> findByCode(String code);
 }

@@ -10,16 +10,100 @@ enum ProjectStatus {
     ARCHIVED
 }
 
-"""Фильтр списка инициатив. Пустой фильтр возвращает весь реестр."""
+"""Поле сортировки реестра инициатив."""
+enum ProjectSortField {
+    CODE
+    TITLE
+    REQUESTED_BUDGET
+    STATUS
+}
+
+"""Направление сортировки."""
+enum SortDirection {
+    ASC
+    DESC
+}
+
+"""Сортировка списка инициатив."""
+input ProjectSort {
+    field: ProjectSortField!
+    direction: SortDirection = ASC
+}
+
+"""Фильтр списка инициатив. Пустой фильтр возвращает весь реестр, кроме архивных."""
 input ProjectFilter {
     status: ProjectStatus
+    statuses: [ProjectStatus!]
+    departmentCode: String
+    minBudget: String
+    maxBudget: String
+    goalCode: String
+    excludeArchived: Boolean = true
+}
+
+"""Регистрация новой инициативы. Создаёт карточку в статусе DRAFT."""
+input RegisterInitiativeInput {
+    code: String!
+    title: String!
+    description: String
+    departmentCode: String!
+    ownerId: ID!
+    requestedBudget: String!
+    goals: [GoalContributionInput!]!
+}
+
+"""Вклад инициативы в стратегическую цель."""
+input GoalContributionInput {
+    goalCode: String!
+    level: Int!
+}
+
+"""Число инициатив в одном статусе."""
+type StatusCount {
+    status: ProjectStatus!
+    count: Int!
+}
+
+"""Суммарный запрошенный бюджет по подразделению."""
+type DepartmentBudgetStat {
+    departmentCode: String!
+    totalRequestedBudget: String!
+}
+
+"""Сводка реестра инициатив по выбранному фильтру."""
+type ProjectRegistryStats {
+    totalCount: Int!
+    byStatus: [StatusCount!]!
+    totalRequestedBudget: String!
+    budgetByDepartment: [DepartmentBudgetStat!]!
 }
 
 type Query {
     """Карточка одной инициативы вместе с подразделением, целями и инициатором."""
     project(id: ID!): ProjectCard!
     """Реестр инициатив. Чтение не меняет статус и не запускает оценку."""
-    projects(filter: ProjectFilter): [ProjectCard!]!
+    projects(filter: ProjectFilter, sort: ProjectSort): [ProjectCard!]!
+    """Сводка реестра: число карточек, статусы и запрошенный бюджет."""
+    projectRegistryStats(filter: ProjectFilter): ProjectRegistryStats!
+}
+
+type Mutation {
+    """Зарегистрировать инициативу. Создаёт карточку в статусе DRAFT."""
+    registerInitiative(input: RegisterInitiativeInput!): ProjectCard!
+    """Подать инициативу на рассмотрение."""
+    submitInitiative(id: ID!): ProjectCard!
+    """Начать экспертизу поданной инициативы."""
+    startReview(id: ID!): ProjectCard!
+    """Завершить оценку инициативы."""
+    completeEvaluation(id: ID!): ProjectCard!
+    """Включить инициативу в портфель."""
+    approveForPortfolio(id: ID!): ProjectCard!
+    """Вернуть инициативу на доработку."""
+    returnForRevision(id: ID!, reason: String): ProjectCard!
+    """Отклонить инициативу."""
+    rejectInitiative(id: ID!, reason: String): ProjectCard!
+    """Архивировать инициативу, которая не идёт в портфель."""
+    archiveInitiative(id: ID!): ProjectCard!
 }
 
 """Карточка инициативы для просмотра портфеля, а не строка таблицы projects."""
