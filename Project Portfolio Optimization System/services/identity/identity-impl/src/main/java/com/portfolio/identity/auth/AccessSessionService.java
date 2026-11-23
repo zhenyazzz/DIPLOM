@@ -68,25 +68,6 @@ public class AccessSessionService {
         }
     }
 
-    public void revoke(String jti) {
-        if (jti == null || jti.isBlank()) {
-            return;
-        }
-        String payload = redis.opsForValue().getAndDelete(sessionKey(jti));
-        if (payload == null) {
-            return;
-        }
-        int sep = payload.indexOf('|');
-        if (sep > 0) {
-            try {
-                UUID userId = UUID.fromString(payload.substring(0, sep));
-                redis.opsForSet().remove(userKey(userId), jti);
-            } catch (IllegalArgumentException ignored) {
-                // corrupt payload – session key already removed
-            }
-        }
-    }
-
     public void revokeAllForUser(UUID userId) {
         if (userId == null) {
             return;

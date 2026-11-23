@@ -13,7 +13,6 @@ import com.portfolio.identity.identity.UserRepository;
 import com.portfolio.identity.shared.ApiException;
 import java.util.Locale;
 import java.util.Optional;
-import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -86,17 +85,6 @@ public class AuthService {
                 .map(UserEntity::getId)
                 .ifPresent(accessSessionService::revokeAllForUser);
         refreshSessionService.revokeOne(rawRefreshToken);
-    }
-
-    /**
-     * Revoke a single access session by jti (optional companion to cookie logout).
-     */
-    public void revokeAccessSession(String jti) {
-        accessSessionService.revoke(jti);
-    }
-
-    public void revokeAccessSessionsForUser(UUID userId) {
-        accessSessionService.revokeAllForUser(userId);
     }
 
     private AuthResult toAuthResult(UserEntity user, String rawRefresh) {

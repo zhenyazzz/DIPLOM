@@ -29,7 +29,7 @@ class AccessSessionServiceTest extends PostgresIntegrationTest {
     }
 
     @Test
-    void createIsActiveRevokeLifecycle() {
+    void createAndRequireActive() {
         String jti = UUID.randomUUID().toString();
         UUID userId = UUID.randomUUID();
 
@@ -39,10 +39,6 @@ class AccessSessionServiceTest extends PostgresIntegrationTest {
         assertThat(sessions.isActive(jti)).isTrue();
         assertThat(sessions.requireActive(jti).userId()).isEqualTo(userId);
         assertThat(sessions.requireActive(jti).role()).isEqualTo("INITIATOR");
-
-        sessions.revoke(jti);
-        assertThat(sessions.isActive(jti)).isFalse();
-        assertThat(sessions.requireActive(jti)).isNull();
     }
 
     @Test
