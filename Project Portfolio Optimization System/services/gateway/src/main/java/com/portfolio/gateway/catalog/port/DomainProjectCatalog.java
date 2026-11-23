@@ -1,5 +1,9 @@
-package com.portfolio.gateway.catalog;
+package com.portfolio.gateway.catalog.port;
 
+import com.portfolio.gateway.catalog.command.RegisterInitiativeCommand;
+import com.portfolio.gateway.catalog.model.ProjectRegistryStats;
+import com.portfolio.gateway.catalog.model.ProjectSnapshot;
+import com.portfolio.gateway.catalog.query.ProjectFilter;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;

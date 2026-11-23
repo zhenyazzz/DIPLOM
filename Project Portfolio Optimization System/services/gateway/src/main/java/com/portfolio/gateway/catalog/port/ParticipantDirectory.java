@@ -1,5 +1,6 @@
-package com.portfolio.gateway.catalog;
+package com.portfolio.gateway.catalog.port;
 
+import com.portfolio.gateway.catalog.model.ParticipantCard;
 import java.util.Optional;
 import java.util.UUID;
 

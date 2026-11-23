@@ -1,10 +1,10 @@
 package com.portfolio.gateway.graphql;
 
+import com.portfolio.gateway.catalog.stub.StubDomainProjectCatalog;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
-import com.portfolio.gateway.catalog.StubDomainProjectCatalog;
 import com.portfolio.gateway.security.IdentitySessionClient;
 import com.portfolio.gateway.support.TestJwt;
 import java.net.URI;

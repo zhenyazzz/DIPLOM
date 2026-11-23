@@ -1,9 +1,9 @@
-package com.portfolio.gateway.catalog;
+package com.portfolio.gateway.catalog.model;
 
 import java.util.List;
 import java.util.UUID;
 
-public record ProjectCard(
+public record ProjectSnapshot(
         UUID id,
         String code,
         String title,
@@ -11,5 +11,5 @@ public record ProjectCard(
         ProjectStatus status,
         String requestedBudget,
         DepartmentCard department,
-        List<GoalContributionCard> goals,
-        ParticipantCard initiator) {}
+        UUID ownerId,
+        List<GoalContributionCard> goals) {}
