@@ -1,5 +1,13 @@
-package com.portfolio.gateway.catalog;
+package com.portfolio.gateway.catalog.service;
 
+import com.portfolio.gateway.catalog.command.RegisterInitiativeCommand;
+import com.portfolio.gateway.catalog.exception.InvalidProjectIdException;
+import com.portfolio.gateway.catalog.model.GoalContributionCard;
+import com.portfolio.gateway.catalog.model.ParticipantCard;
+import com.portfolio.gateway.catalog.model.ProjectCard;
+import com.portfolio.gateway.catalog.model.ProjectSnapshot;
+import com.portfolio.gateway.catalog.port.DomainProjectCatalog;
+import com.portfolio.gateway.catalog.port.ParticipantDirectory;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;

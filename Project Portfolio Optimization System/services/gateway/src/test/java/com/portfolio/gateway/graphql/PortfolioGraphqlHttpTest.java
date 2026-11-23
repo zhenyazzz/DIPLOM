@@ -1,8 +1,8 @@
 package com.portfolio.gateway.graphql;
 
+import com.portfolio.gateway.catalog.stub.StubDomainProjectCatalog;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.portfolio.gateway.catalog.StubDomainProjectCatalog;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;

@@ -1,8 +1,8 @@
 package com.portfolio.gateway.graphql;
 
-import com.portfolio.gateway.catalog.PortfolioCommandService;
-import com.portfolio.gateway.catalog.ProjectCard;
-import com.portfolio.gateway.catalog.RegisterInitiativeCommand;
+import com.portfolio.gateway.catalog.command.RegisterInitiativeCommand;
+import com.portfolio.gateway.catalog.model.ProjectCard;
+import com.portfolio.gateway.catalog.service.PortfolioCommandService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;

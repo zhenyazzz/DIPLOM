@@ -1,5 +1,17 @@
-package com.portfolio.gateway.catalog;
+package com.portfolio.gateway.catalog.service;
 
+import com.portfolio.gateway.catalog.exception.InvalidProjectIdException;
+import com.portfolio.gateway.catalog.exception.ProjectNotFoundException;
+import com.portfolio.gateway.catalog.model.GoalContributionCard;
+import com.portfolio.gateway.catalog.model.ParticipantCard;
+import com.portfolio.gateway.catalog.model.ProjectCard;
+import com.portfolio.gateway.catalog.model.ProjectRegistryStats;
+import com.portfolio.gateway.catalog.model.ProjectSnapshot;
+import com.portfolio.gateway.catalog.port.DomainProjectCatalog;
+import com.portfolio.gateway.catalog.port.ParticipantDirectory;
+import com.portfolio.gateway.catalog.query.ProjectFilter;
+import com.portfolio.gateway.catalog.query.ProjectSort;
+import com.portfolio.gateway.catalog.query.SortDirection;
 import java.math.BigDecimal;
 import java.util.Comparator;
 import java.util.List;

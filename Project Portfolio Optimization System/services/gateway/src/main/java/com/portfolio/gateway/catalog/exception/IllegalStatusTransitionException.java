@@ -1,4 +1,6 @@
-package com.portfolio.gateway.catalog;
+package com.portfolio.gateway.catalog.exception;
+
+import com.portfolio.gateway.catalog.model.ProjectStatus;
 
 public class IllegalStatusTransitionException extends RuntimeException {
 

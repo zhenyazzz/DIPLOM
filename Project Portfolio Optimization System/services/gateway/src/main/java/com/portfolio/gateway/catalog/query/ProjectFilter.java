@@ -1,5 +1,6 @@
-package com.portfolio.gateway.catalog;
+package com.portfolio.gateway.catalog.query;
 
+import com.portfolio.gateway.catalog.model.ProjectStatus;
 import java.util.List;
 
 public record ProjectFilter(

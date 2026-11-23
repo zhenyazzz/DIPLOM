@@ -1,5 +1,22 @@
-package com.portfolio.gateway.catalog;
+package com.portfolio.gateway.catalog.stub;
 
+import com.portfolio.gateway.catalog.command.GoalContributionInput;
+import com.portfolio.gateway.catalog.command.RegisterInitiativeCommand;
+import com.portfolio.gateway.catalog.exception.CatalogValidationException;
+import com.portfolio.gateway.catalog.exception.ConflictException;
+import com.portfolio.gateway.catalog.exception.IllegalStatusTransitionException;
+import com.portfolio.gateway.catalog.exception.InvalidProjectIdException;
+import com.portfolio.gateway.catalog.exception.ProjectNotFoundException;
+import com.portfolio.gateway.catalog.model.DepartmentBudgetStat;
+import com.portfolio.gateway.catalog.model.DepartmentCard;
+import com.portfolio.gateway.catalog.model.GoalContributionCard;
+import com.portfolio.gateway.catalog.model.ProjectRegistryStats;
+import com.portfolio.gateway.catalog.model.ProjectSnapshot;
+import com.portfolio.gateway.catalog.model.ProjectStatus;
+import com.portfolio.gateway.catalog.model.StatusCount;
+import com.portfolio.gateway.catalog.model.StrategicGoalCard;
+import com.portfolio.gateway.catalog.port.DomainProjectCatalog;
+import com.portfolio.gateway.catalog.query.ProjectFilter;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
@@ -53,11 +70,9 @@ public class StubDomainProjectCatalog implements DomainProjectCatalog {
     }
 
     public void reset() {
-        synchronized (this) {
-            projects.clear();
-            projects.put(PORTAL_ID, portal());
-            projects.put(LEDGER_ID, ledger());
-        }
+        projects.clear();
+        projects.put(PORTAL_ID, portal());
+        projects.put(LEDGER_ID, ledger());
     }
 
     @Override
@@ -67,37 +82,33 @@ public class StubDomainProjectCatalog implements DomainProjectCatalog {
 
     @Override
     public List<ProjectSnapshot> findAll(ProjectFilter filter) {
-        synchronized (this) {
-            return projects.values().stream().filter(project -> matches(project, filter)).toList();
-        }
+        return projects.values().stream().filter(project -> matches(project, filter)).toList();
     }
 
     @Override
     public ProjectSnapshot register(RegisterInitiativeCommand command) {
-        synchronized (this) {
-            validateRegister(command);
-            UUID ownerId;
-            try {
-                ownerId = UUID.fromString(command.ownerId());
-            } catch (IllegalArgumentException | NullPointerException ex) {
-                throw new InvalidProjectIdException();
-            }
-            List<GoalContributionCard> goals = command.goals().stream()
-                    .map(item -> new GoalContributionCard(GOALS.get(item.goalCode()), item.level()))
-                    .toList();
-            ProjectSnapshot snapshot = new ProjectSnapshot(
-                    UUID.randomUUID(),
-                    command.code(),
-                    command.title(),
-                    command.description(),
-                    ProjectStatus.DRAFT,
-                    money(parseBudget(command.requestedBudget())),
-                    DEPARTMENTS.get(command.departmentCode()),
-                    ownerId,
-                    goals);
-            projects.put(snapshot.id(), snapshot);
-            return snapshot;
+        validateRegister(command);
+        UUID ownerId;
+        try {
+            ownerId = UUID.fromString(command.ownerId());
+        } catch (IllegalArgumentException | NullPointerException ex) {
+            throw new InvalidProjectIdException();
         }
+        List<GoalContributionCard> goals = command.goals().stream()
+                .map(item -> new GoalContributionCard(GOALS.get(item.goalCode()), item.level()))
+                .toList();
+        ProjectSnapshot snapshot = new ProjectSnapshot(
+                UUID.randomUUID(),
+                command.code(),
+                command.title(),
+                command.description(),
+                ProjectStatus.DRAFT,
+                money(parseBudget(command.requestedBudget())),
+                DEPARTMENTS.get(command.departmentCode()),
+                ownerId,
+                goals);
+        projects.put(snapshot.id(), snapshot);
+        return snapshot;
     }
 
     @Override
@@ -163,27 +174,25 @@ public class StubDomainProjectCatalog implements DomainProjectCatalog {
     }
 
     private ProjectSnapshot transition(UUID id, Set<ProjectStatus> allowed, ProjectStatus next) {
-        synchronized (this) {
-            ProjectSnapshot current = projects.get(id);
-            if (current == null) {
-                throw new ProjectNotFoundException(id);
-            }
-            if (!allowed.contains(current.status())) {
-                throw new IllegalStatusTransitionException(current.status(), next);
-            }
-            ProjectSnapshot updated = new ProjectSnapshot(
-                    current.id(),
-                    current.code(),
-                    current.title(),
-                    current.description(),
-                    next,
-                    current.requestedBudget(),
-                    current.department(),
-                    current.ownerId(),
-                    current.goals());
-            projects.put(id, updated);
-            return updated;
+        ProjectSnapshot current = projects.get(id);
+        if (current == null) {
+            throw new ProjectNotFoundException(id);
         }
+        if (!allowed.contains(current.status())) {
+            throw new IllegalStatusTransitionException(current.status(), next);
+        }
+        ProjectSnapshot updated = new ProjectSnapshot(
+                current.id(),
+                current.code(),
+                current.title(),
+                current.description(),
+                next,
+                current.requestedBudget(),
+                current.department(),
+                current.ownerId(),
+                current.goals());
+        projects.put(id, updated);
+        return updated;
     }
 
     private void validateRegister(RegisterInitiativeCommand command) {

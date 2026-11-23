@@ -1,4 +1,4 @@
-package com.portfolio.gateway.catalog;
+package com.portfolio.gateway.catalog.model;
 
 public enum ProjectStatus {
     DRAFT,

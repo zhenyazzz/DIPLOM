@@ -1,10 +1,10 @@
 package com.portfolio.gateway.graphql;
 
-import com.portfolio.gateway.catalog.CatalogValidationException;
-import com.portfolio.gateway.catalog.ConflictException;
-import com.portfolio.gateway.catalog.IllegalStatusTransitionException;
-import com.portfolio.gateway.catalog.InvalidProjectIdException;
-import com.portfolio.gateway.catalog.ProjectNotFoundException;
+import com.portfolio.gateway.catalog.exception.CatalogValidationException;
+import com.portfolio.gateway.catalog.exception.ConflictException;
+import com.portfolio.gateway.catalog.exception.IllegalStatusTransitionException;
+import com.portfolio.gateway.catalog.exception.InvalidProjectIdException;
+import com.portfolio.gateway.catalog.exception.ProjectNotFoundException;
 import graphql.GraphQLError;
 import graphql.GraphqlErrorBuilder;
 import java.util.Map;

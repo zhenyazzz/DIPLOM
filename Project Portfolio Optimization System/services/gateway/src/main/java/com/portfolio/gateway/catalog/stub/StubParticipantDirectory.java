@@ -1,5 +1,7 @@
-package com.portfolio.gateway.catalog;
+package com.portfolio.gateway.catalog.stub;
 
+import com.portfolio.gateway.catalog.model.ParticipantCard;
+import com.portfolio.gateway.catalog.port.ParticipantDirectory;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Component;
