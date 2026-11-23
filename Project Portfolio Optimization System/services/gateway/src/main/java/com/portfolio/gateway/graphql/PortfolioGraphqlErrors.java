@@ -1,10 +1,10 @@
 package com.portfolio.gateway.graphql;
 
-import com.portfolio.gateway.catalog.CatalogValidationException;
-import com.portfolio.gateway.catalog.ConflictException;
-import com.portfolio.gateway.catalog.IllegalStatusTransitionException;
-import com.portfolio.gateway.catalog.InvalidProjectIdException;
-import com.portfolio.gateway.catalog.ProjectNotFoundException;
+import com.portfolio.gateway.catalog.exception.CatalogValidationException;
+import com.portfolio.gateway.catalog.exception.ConflictException;
+import com.portfolio.gateway.catalog.exception.IllegalStatusTransitionException;
+import com.portfolio.gateway.catalog.exception.InvalidProjectIdException;
+import com.portfolio.gateway.catalog.exception.ProjectNotFoundException;
 import graphql.GraphQLError;
 import graphql.GraphqlErrorBuilder;
 import java.util.Map;
@@ -57,6 +57,16 @@ public class PortfolioGraphqlErrors {
                 .message(ex.getMessage())
                 .errorType(ErrorType.BAD_REQUEST)
                 .extensions(Map.of("code", "BAD_REQUEST"))
+                .build();
+    }
+
+    @GraphQlExceptionHandler
+    public GraphQLError security(GraphqlSecurityException ex) {
+        ErrorType type = "FORBIDDEN".equals(ex.getCode()) ? ErrorType.FORBIDDEN : ErrorType.UNAUTHORIZED;
+        return GraphqlErrorBuilder.newError()
+                .message(ex.getMessage())
+                .errorType(type)
+                .extensions(Map.of("code", ex.getCode()))
                 .build();
     }
 }

@@ -6,6 +6,7 @@ import java.util.UUID;
 
 public record AccessTokenClaims(
         UUID subject,
+        String jti,
         String role,
         List<String> roles,
         String email,

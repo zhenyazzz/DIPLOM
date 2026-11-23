@@ -1,12 +1,17 @@
 package com.portfolio.gateway.graphql;
 
+import com.portfolio.gateway.catalog.stub.StubDomainProjectCatalog;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
 
-import com.portfolio.gateway.catalog.StubDomainProjectCatalog;
+import com.portfolio.gateway.security.IdentitySessionClient;
+import com.portfolio.gateway.support.TestJwt;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,6 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
@@ -33,9 +39,16 @@ class PortfolioGraphqlHttpTest {
     @Autowired
     StubDomainProjectCatalog catalog;
 
+    @MockitoBean
+    IdentitySessionClient identitySessionClient;
+
+    private String adminToken;
+
     @BeforeEach
     void resetCatalog() {
         catalog.reset();
+        when(identitySessionClient.isSessionActive(anyString())).thenReturn(true);
+        adminToken = TestJwt.roleToken(UUID.randomUUID(), "ADMIN");
     }
 
     @Test
@@ -308,6 +321,7 @@ class PortfolioGraphqlHttpTest {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:" + port + "/graphql"))
                 .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer " + adminToken)
                 .POST(HttpRequest.BodyPublishers.ofString(json))
                 .build();
         return CLIENT.send(request, HttpResponse.BodyHandlers.ofString());

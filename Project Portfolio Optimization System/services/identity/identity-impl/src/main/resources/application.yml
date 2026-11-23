@@ -8,6 +8,12 @@ spring:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/portfolio_core}
     username: ${SPRING_DATASOURCE_USERNAME:portfolio}
     password: ${SPRING_DATASOURCE_PASSWORD:portfolio}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      repositories:
+        enabled: false
   jpa:
     open-in-view: false
     hibernate:

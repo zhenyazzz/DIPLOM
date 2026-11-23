@@ -29,6 +29,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenService jwtTokenService;
     private final RefreshSessionService refreshSessionService;
+    private final AccessSessionService accessSessionService;
     private final UserMapper userMapper;
 
     @Transactional
@@ -76,21 +77,27 @@ public class AuthService {
 
     @Transactional
     public void logout(String rawRefreshToken) {
-        if (rawRefreshToken != null && !rawRefreshToken.isBlank()) {
-            refreshSessionService.revokeOne(rawRefreshToken);
+        if (rawRefreshToken == null || rawRefreshToken.isBlank()) {
+            return;
         }
+        Optional<RefreshSessionEntity> active = refreshSessionService.resolveActive(rawRefreshToken);
+        active.map(RefreshSessionEntity::getUser)
+                .map(UserEntity::getId)
+                .ifPresent(accessSessionService::revokeAllForUser);
+        refreshSessionService.revokeOne(rawRefreshToken);
     }
 
     private AuthResult toAuthResult(UserEntity user, String rawRefresh) {
-        String access = jwtTokenService.issueAccessToken(user);
-        TokenResponse tokens = new TokenResponse(access, jwtTokenService.accessExpiresInSeconds());
-        return new AuthResult(tokens, rawRefresh);
+        JwtTokenService.IssuedAccessToken issued = jwtTokenService.issueAccessToken(user);
+        accessSessionService.create(issued.jti(), user.getId(), issued.role());
+        TokenResponse tokens = new TokenResponse(issued.token(), jwtTokenService.accessExpiresInSeconds());
+        return new AuthResult(tokens, rawRefresh, issued.jti());
     }
 
     private static String normalizeEmail(String email) {
         return email.trim().toLowerCase(Locale.ROOT);
     }
 
-    public record AuthResult(TokenResponse tokens, String rawRefreshToken) {
+    public record AuthResult(TokenResponse tokens, String rawRefreshToken, String accessJti) {
     }
 }

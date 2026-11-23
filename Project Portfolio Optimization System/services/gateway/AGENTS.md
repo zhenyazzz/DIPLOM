@@ -17,20 +17,26 @@ Single entry point behind nginx for `/api/**`. Routes by prefix (no StripPrefix)
 - Early JWT via `common-security`; login rate-limit; CORS
 - `/api/v1/files/**` → 404 (FTS internal)
 - `/ws/**` не здесь — nginx → notify напрямую
-- No token issuance, no DB
+- No token issuance, no DB, **no Redis** (session check goes to identity)
 - GraphQL (`POST /graphql`, GraphiQL `/graphiql`) — чтение карточки/реестра, `projectRegistryStats` и бизнес-мутации жизненного цикла (register / submit / review / evaluate / approve / return / reject / archive), не CRUD. Resolver сразу отдаёт запрос в `PortfolioQueryService` / `PortfolioCommandService`. Подразделение и цели приходят через `DomainProjectCatalog`, инициатор через `ParticipantDirectory`. Сейчас оба порта — заглушки без сети (ЛР4). Реальный gRPC вместо заглушек — следующая лаба, не этот этап.
 
-Канон маршрутов: `01_ARCHITECTURE_Portfolio_Optimizer.md` §4.
+### GraphQL security (ЛР5)
+
+`GraphqlSecurityInterceptor`: Bearer JWT (`AccessTokenVerifier`) → `IdentitySessionClient` → `GET {IDENTITY_URL}/api/v1/auth/sessions/active` → RBAC (`GraphqlOperationAccess`). Errors: `extensions.code` = `UNAUTHORIZED` / `FORBIDDEN`. Internal services must not re-check JWT.
+
+Канон маршрутов: `01_ARCHITECTURE_Portfolio_Optimizer.md` §4. RBAC-матрица: корневой `AGENTS.md`.
 
 ## How to run
 
 ```bash
 mvn -f libs/common-security/pom.xml install
 mvn -f services/gateway/pom.xml package
-java -jar services/gateway/target/gateway.jar
+CORE_JWT_SECRET='local-dev-secret-at-least-32-bytes!!' \
+  IDENTITY_URL=http://localhost:8080 \
+  java -jar services/gateway/target/gateway.jar
 ```
 
-Needs `CORE_JWT_SECRET` (≥ 32 UTF-8 bytes).
+Needs `CORE_JWT_SECRET` (≥ 32 UTF-8 bytes) shared with identity. Identity (+ Redis) must be up for GraphQL business calls.
 
 ## Lombok
 
